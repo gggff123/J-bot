@@ -4,12 +4,27 @@ from urllib.parse import quote
 a=input("What do you want to do?: ")
 @needle.tool
 def create_file(file_name:str,value:str):
-    """Create a file and with a value"""
+    """"ONLY use this tool when the user explicitly wants to CREATE A NEW FILE.
+        NEVER use this tool when the user says add, append, insert, modify, update,
+        or write something into an EXISTING file."""
     with open(file_name,"w") as f:
         f.write(value)
     return{
         "Output":f"Created a file {file_name}"
     }
+@needle.tool
+def read_file(file:str):
+    """Reads text file"""
+    with open(file,"r") as f:
+        for line in f:
+            print(line.strip())
+    return "Read !"
+@needle.tool
+def open_file(file:str):
+    """Open a file in the designated app"""
+    import os
+    os.startfile(file)
+    return f"Opened your file: {file}"
 @needle.tool
 def get_weather(location:str):
     """Get the current weather for a location, including temperature and wind speed."""
@@ -23,9 +38,7 @@ def get_weather(location:str):
     b=weather.json()
     temp=b['current']['temperature_2m']
     wind=b['current']['wind_speed_10m']
-    return{
-        "output":f"its {temp}°C in {location} right now , with a wind speed of about {wind}km/h"
-    }
+    return f"its {temp}°C in {location} right now , with a wind speed of about {wind}km/h"
 @needle.tool
 def web_search_wikipedia(qu:str):
     """Searches for an object . DO THIS ONLY FOR NAMES , PLACES , ITEM"""
@@ -88,9 +101,8 @@ def web_search_wikipedia(qu:str):
     page = next(iter(pages.values()))
     article=page.get("extract", "No extract found.")
 
-    return {
-        "extract": article,
-    }
+    return article
 
-agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia])
-print(agent.run(a))
+agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file])
+ai_response = agent.run(a)
+print(ai_response["results"])
