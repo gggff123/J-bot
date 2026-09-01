@@ -1,6 +1,8 @@
 import needle
 import requests
 from urllib.parse import quote
+import shutil
+import subprocess
 a=input("What do you want to do?: ")
 @needle.tool
 def create_file(file_name:str,value:str):
@@ -25,6 +27,11 @@ def open_file(file:str):
     import os
     os.startfile(file)
     return f"Opened your file: {file}"
+@needle.tool
+def move_file(orignal_path:str,location:str):
+    """Moves a file from the original location to the final location"""
+    shutil.move(orignal_path,location)
+    return  f"Moved {orignal_path} to {location}."
 @needle.tool
 def get_weather(location:str):
     """Get the current weather for a location, including temperature and wind speed."""
@@ -103,6 +110,6 @@ def web_search_wikipedia(qu:str):
 
     return article
 
-agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file])
+agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file,move_file])
 ai_response = agent.run(a)
 print(ai_response["results"])
