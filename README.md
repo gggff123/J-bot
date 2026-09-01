@@ -93,10 +93,8 @@ The goal is to make adding a new capability as simple as creating another tool.
 
 | Tool                  | Status |
 | :-------------------- | :----: |
-| 🔎 Wikipedia          |    ✅   |
-| 📝 Summarization      |    ✅   |
-| 🌐 Web Search         |   🚧   |
-| 🌦️ Weather           |   🚧   |
+| 🌐 Web Search         |    ✅  |
+| 🌦️ Weather           |     ✅  |
 | 🧮 Calculator         |   🚧   |
 | 📁 File Operations    |   🚧   |
 | 💻 System Information |   🚧   |
@@ -216,7 +214,6 @@ J-bot
 │
 ├── 🔧 Tools
 │   ├── Wikipedia
-│   ├── Summarizer
 │   ├── Web Search
 │   └── ...
 │
