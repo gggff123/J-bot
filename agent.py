@@ -2,7 +2,7 @@ import needle
 import requests
 from urllib.parse import quote
 import shutil
-import subprocess
+import os
 a=input("What do you want to do?: ")
 @needle.tool
 def create_file(file_name:str,value:str):
@@ -32,6 +32,16 @@ def move_file(orignal_path:str,location:str):
     """Moves a file from the original location to the final location"""
     shutil.move(orignal_path,location)
     return  f"Moved {orignal_path} to {location}."
+@needle.tool
+def remove_file(file_path:str):
+    """Removes a file from the given path"""
+    os.remove(file_path)
+    return f"Removed file from path {file_path}"
+@needle.tool
+def copy_file(path:str,location:str):
+    """Copies a file from one path to another"""
+    shutil.copy2(path,location)
+    return f"File copied from path {path} to {location}"
 @needle.tool
 def get_weather(location:str):
     """Get the current weather for a location, including temperature and wind speed."""
@@ -110,6 +120,6 @@ def web_search_wikipedia(qu:str):
 
     return article
 
-agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file,move_file])
+agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file,move_file,remove_file,copy_file])
 ai_response = agent.run(a)
 print(ai_response["results"])
