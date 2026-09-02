@@ -96,7 +96,7 @@ The goal is to make adding a new capability as simple as creating another tool.
 | 🌐 Web Search         |    ✅  |
 | 🌦️ Weather           |     ✅  |
 | 🧮 Calculator         |   🚧   |
-| 📁 File Operations    |   🚧   |
+| 📁 File Operations    |   ✅   |
 | 💻 System Information |   🚧   |
 | ⏰ Automation          |   🚧   |
 
@@ -230,7 +230,7 @@ The architecture is intentionally evolving as new capabilities are added.
 * [x] Web search
 * [x] Weather
 * [ ] Calculator
-* [ ] File management
+* [x] File management
 * [ ] System information
 * [ ] More APIs
 
