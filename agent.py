@@ -60,7 +60,7 @@ def get_weather(location:str):
 def web_search_wikipedia(qu:str):
     """Searches for an object . DO THIS ONLY FOR NAMES , PLACES , ITEM"""
     headers = {
-        "User-Agent": "Jarvis/1.0 (https://github.com/gggff123/J-bot)",
+        "User-Agent": "J-bot/1.0 (https://github.com/gggff123/J-bot)",
         "Accept-Encoding": "gzip",
     }
 
