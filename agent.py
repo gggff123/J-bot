@@ -5,46 +5,156 @@ import shutil
 import os
 a=input("What do you want to do?: ")
 @needle.tool
+#-----------------------------------------
+# FILE OPERATIONS
+# ----------------------------------------
 def create_file(file_name:str,value:str):
-    """"ONLY use this tool when the user explicitly wants to CREATE A NEW FILE.
-        NEVER use this tool when the user says add, append, insert, modify, update,
-        or write something into an EXISTING file."""
-    with open(file_name,"w") as f:
-        f.write(value)
-    return{
-        "Output":f"Created a file {file_name}"
-    }
+    """
+        Create a NEW text file.
+
+        IMPORTANT ARGUMENT RULES:
+        - file_name MUST be the actual filename/path requested by the user.
+          Examples: "app.txt", "notes.txt", "data/output.txt"
+        - value MUST be the content that should be written into that file.
+        - NEVER put a description such as "weather content", "the answer",
+          "output", or "text" into file_name.
+        - If the user says "put X into app.txt", then:
+            file_name = "app.txt"
+            value = X
+
+        USE THIS TOOL ONLY when the destination file does NOT already exist
+        or the user explicitly asks to create a new file.
+
+        DO NOT use this tool for:
+        - adding to an existing file
+        - appending
+        - inserting
+        - modifying
+        - updating
+        - replacing part of an existing file
+
+        For multi-step requests, use the result of the previous tool as
+        the value for this tool.
+
+        Example:
+        User: "Get the weather for Kolkata and put it into app.txt"
+        Step 1: call get_weather("Kolkata")
+        Step 2: call create_file(
+            file_name="app.txt",
+            value=<exact result returned by get_weather>
+        )
+        """
+    if os.path.exists(file_name)==True:
+        print(f"WARNING | WILL OVERWRITE YOUR EXISTING FILE {file_name} |")
+        confirm=input("Confirm (y/n) : ")
+        if confirm=="y" or confirm== "Y":
+            with open(file_name,"w") as f:
+                f.write(value)
+            return{
+                "Output":f"Created a file {file_name}"
+            }
+        else:
+            return "No seleceted so exiting."
+    else:
+        with open(file_name,"w") as f:
+            f.write(value)
+        return{
+            "Output":f"Created a file {file_name}"
+        }
 @needle.tool
 def read_file(file:str):
-    """Reads text file"""
+    """
+    Read and return the contents of an existing text file.
+
+    file MUST be the actual filename/path.
+    Example: read_file("app.txt")
+
+    Do not use a description such as "the file" or "weather file"
+    unless that is literally the filename.
+    """
     with open(file,"r") as f:
         for line in f:
             print(line.strip())
     return "Read !"
 @needle.tool
 def open_file(file:str):
-    """Open a file in the designated app"""
+    """
+    Open an existing file using the operating system's default application.
+
+    file MUST be the actual filename/path.
+    Example: open_file("app.txt")
+
+    Do not use this tool to read or modify file contents.
+    """
     import os
     os.startfile(file)
     return f"Opened your file: {file}"
 @needle.tool
 def move_file(orignal_path:str,location:str):
-    """Moves a file from the original location to the final location"""
+    """
+    Move an existing file.
+
+    orignal_path = the current actual file path.
+    location = the destination path or directory.
+
+    Example:
+    move_file("app.txt", "C:/Users/User/Documents/app.txt")
+    """
     shutil.move(orignal_path,location)
     return  f"Moved {orignal_path} to {location}."
 @needle.tool
 def remove_file(file_path:str):
-    """Removes a file from the given path"""
-    os.remove(file_path)
-    return f"Removed file from path {file_path}"
+    """
+        Permanently delete an existing file.
+
+        file_path MUST be the actual file path.
+        Never delete a file unless the user's request clearly asks for deletion.
+    """
+    confirm=input(f"WARNING | DELETING FILE : {file_path} (y/n): ")
+    if confirm == "y" or confirm== "Y":
+        os.remove(file_path)
+        return f"Removed file from path {file_path}"
+    else:
+        return f"No selected so exiting.."
 @needle.tool
 def copy_file(path:str,location:str):
-    """Copies a file from one path to another"""
+    """
+    Copy an existing file.
+
+    path = actual source file path.
+    location = actual destination path or directory.
+
+    Example:
+    copy_file("app.txt", "backup/app.txt")
+    """
     shutil.copy2(path,location)
     return f"File copied from path {path} to {location}"
+#-----------------------------------------
+# SEARCH
+# ----------------------------------------
 @needle.tool
 def get_weather(location:str):
-    """Get the current weather for a location, including temperature and wind speed."""
+    """
+    Get the current weather for a location.
+
+    location MUST be a real place name supplied by the user.
+
+    Returns a text result containing:
+    - current temperature
+    - current wind speed
+
+    Example:
+    get_weather("Kolkata")
+
+    IMPORTANT:
+    When another tool needs the weather information, use the EXACT
+    text returned by this tool as that tool's input.
+
+    Example workflow:
+    get_weather("Kolkata")
+        -> returns weather text
+    create_file("app.txt", <weather text>)
+    """
     url=f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
     result=requests.get(url)
     a=result.json()
@@ -119,7 +229,7 @@ def web_search_wikipedia(qu:str):
     article=page.get("extract", "No extract found.")
 
     return article
-
+# calling others
 agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file,move_file,remove_file,copy_file])
 ai_response = agent.run(a)
 print(ai_response["results"])
