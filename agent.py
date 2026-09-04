@@ -1,49 +1,54 @@
-import needle
+from main import tool,run_agent
 import requests
 from urllib.parse import quote
 import shutil
 import os
 a=input("What do you want to do?: ")
-@needle.tool
 #-----------------------------------------
 # FILE OPERATIONS
 # ----------------------------------------
+@tool
 def create_file(file_name:str,value:str):
     """
-        Create a NEW text file.
+    Create a text file.
 
-        IMPORTANT ARGUMENT RULES:
-        - file_name MUST be the actual filename/path requested by the user.
-          Examples: "app.txt", "notes.txt", "data/output.txt"
-        - value MUST be the content that should be written into that file.
-        - NEVER put a description such as "weather content", "the answer",
-          "output", or "text" into file_name.
-        - If the user says "put X into app.txt", then:
-            file_name = "app.txt"
-            value = X
+    Args:
+        file_name: The EXACT filename/path where the file must be created.
+        value: The EXACT content that must be written into the file.
 
-        USE THIS TOOL ONLY when the destination file does NOT already exist
-        or the user explicitly asks to create a new file.
+    IMPORTANT:
+        file_name is ALWAYS the destination filename.
+        value is ALWAYS the content.
 
-        DO NOT use this tool for:
-        - adding to an existing file
-        - appending
-        - inserting
-        - modifying
-        - updating
-        - replacing part of an existing file
+    Example:
+        User: "Get weather for Kolkata and put it into weather.txt"
 
-        For multi-step requests, use the result of the previous tool as
-        the value for this tool.
+        First:
+            get_weather("Kolkata")
 
-        Example:
-        User: "Get the weather for Kolkata and put it into app.txt"
-        Step 1: call get_weather("Kolkata")
-        Step 2: call create_file(
-            file_name="app.txt",
-            value=<exact result returned by get_weather>
+        Suppose it returns:
+            "It's 31°C in Kolkata right now"
+
+        Then:
+            create_file(
+                file_name="weather.txt",
+                value="It's 31°C in Kolkata right now"
+            )
+
+    NEVER:
+        create_file(
+            file_name="weather content",
+            value="weather.txt"
         )
-        """
+
+    NEVER use descriptions such as:
+        "weather content"
+        "the answer"
+        "the result"
+        "weather information"
+
+    as file_name unless the user literally requested that as the filename.
+    """
     if os.path.exists(file_name)==True:
         print(f"WARNING | WILL OVERWRITE YOUR EXISTING FILE {file_name} |")
         confirm=input("Confirm (y/n) : ")
@@ -61,7 +66,7 @@ def create_file(file_name:str,value:str):
         return{
             "Output":f"Created a file {file_name}"
         }
-@needle.tool
+@tool
 def read_file(file:str):
     """
     Read and return the contents of an existing text file.
@@ -76,7 +81,7 @@ def read_file(file:str):
         for line in f:
             print(line.strip())
     return "Read !"
-@needle.tool
+@tool
 def open_file(file:str):
     """
     Open an existing file using the operating system's default application.
@@ -89,7 +94,7 @@ def open_file(file:str):
     import os
     os.startfile(file)
     return f"Opened your file: {file}"
-@needle.tool
+@tool
 def move_file(orignal_path:str,location:str):
     """
     Move an existing file.
@@ -102,7 +107,7 @@ def move_file(orignal_path:str,location:str):
     """
     shutil.move(orignal_path,location)
     return  f"Moved {orignal_path} to {location}."
-@needle.tool
+@tool
 def remove_file(file_path:str):
     """
         Permanently delete an existing file.
@@ -116,7 +121,7 @@ def remove_file(file_path:str):
         return f"Removed file from path {file_path}"
     else:
         return f"No selected so exiting.."
-@needle.tool
+@tool
 def copy_file(path:str,location:str):
     """
     Copy an existing file.
@@ -132,29 +137,30 @@ def copy_file(path:str,location:str):
 #-----------------------------------------
 # SEARCH
 # ----------------------------------------
-@needle.tool
+@tool
 def get_weather(location:str):
     """
-    Get the current weather for a location.
+        Get the current weather for a location.
 
-    location MUST be a real place name supplied by the user.
+        Args:
+            location: The actual place name requested by the user.
 
-    Returns a text result containing:
-    - current temperature
-    - current wind speed
+        IMPORTANT:
+            Return the weather information as the tool result.
 
-    Example:
-    get_weather("Kolkata")
+            If another tool needs this information, that tool MUST receive
+            the actual result returned by get_weather.
 
-    IMPORTANT:
-    When another tool needs the weather information, use the EXACT
-    text returned by this tool as that tool's input.
+        Example:
 
-    Example workflow:
-    get_weather("Kolkata")
-        -> returns weather text
-    create_file("app.txt", <weather text>)
-    """
+            get_weather("Kolkata")
+
+            returns:
+            "It's 31°C in Kolkata right now"
+
+            The next tool should receive exactly:
+            "It's 31°C in Kolkata right now"
+        """
     url=f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
     result=requests.get(url)
     a=result.json()
@@ -166,7 +172,7 @@ def get_weather(location:str):
     temp=b['current']['temperature_2m']
     wind=b['current']['wind_speed_10m']
     return f"its {temp}°C in {location} right now , with a wind speed of about {wind}km/h"
-@needle.tool
+@tool
 def web_search_wikipedia(qu:str):
     """Searches for an object . DO THIS ONLY FOR NAMES , PLACES , ITEM"""
     headers = {
@@ -229,7 +235,3 @@ def web_search_wikipedia(qu:str):
     article=page.get("extract", "No extract found.")
 
     return article
-# calling others
-agent=needle.Needle(tools=[create_file,get_weather,web_search_wikipedia,read_file,open_file,move_file,remove_file,copy_file])
-ai_response = agent.run(a)
-print(ai_response["results"])
