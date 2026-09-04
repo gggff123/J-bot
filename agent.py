@@ -1,4 +1,4 @@
-from main import tool,run_agent
+from lfm import tool,run_agent
 import requests
 from urllib.parse import quote
 import shutil
@@ -235,3 +235,4 @@ def web_search_wikipedia(qu:str):
     article=page.get("extract", "No extract found.")
 
     return article
+print(run_agent(a))
