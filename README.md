@@ -322,3 +322,6 @@ Built with Python 🐍
 **[GitHub](https://github.com/gggff123/J-bot)**
 
 </div>
+
+# Honourable Mentions
+-- @tomthecatto (Thanks)
