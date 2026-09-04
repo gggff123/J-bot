@@ -3,6 +3,8 @@ import requests
 from urllib.parse import quote
 import shutil
 import os
+from dotenv import load_dotenv
+load_dotenv()
 #-----------------------------------------
 # FILE OPERATIONS
 # ----------------------------------------
@@ -172,68 +174,35 @@ def get_weather(location:str):
     wind=b['current']['wind_speed_10m']
     return f"its {temp}°C in {location} right now , with a wind speed of about {wind}km/h"
 @tool
-def web_search_wikipedia(qu:str):
-    """Searches for an object . DO THIS ONLY FOR NAMES , PLACES , ITEM"""
-    headers = {
-        "User-Agent": "J-bot/1.0 (https://github.com/gggff123/J-bot)",
-        "Accept-Encoding": "gzip",
-    }
-
-    # Search Wikipedia
-    query = quote(qu)
-
-    search_url = (
-        f"https://en.wikipedia.org/w/api.php"
-        f"?action=opensearch"
-        f"&search={query}"
-        f"&limit=5"
-        f"&format=json"
-    )
-
-    search_response = requests.get(
-        search_url,
-        headers=headers,
-        timeout=10
-    )
-    search_response.raise_for_status()
-
-    search_data = search_response.json()
-
-    titles = search_data[1]
-    urls = search_data[3]
-
-    # Take the first result
-    title = titles[0]
-
-    # Get article extract
-    api_url = "https://en.wikipedia.org/w/api.php"
-
-    params = {
-        "action": "query",
-        "prop": "extracts",
-        "exintro": True,
-        "explaintext": True,
-        "titles": title,
-        "format": "json",
-    }
-
-    article_response = requests.get(
-        api_url,
-        params=params,
-        headers=headers,
-        timeout=10
-    )
-
-    article_response.raise_for_status()
-
-    article_data = article_response.json()
-
-    pages = article_data["query"]["pages"]
-
-    page = next(iter(pages.values()))
-    article=page.get("extract", "No extract found.")
-
-    return article
+def web_search(query:str):
+    api_key=os.getenv("tinyfish_key")
+    if not api_key:
+        print("| API KEY NOT FOUND |")
+        confirm=input("Continue (y/n) : ")
+        if confirm == "y" or confirm == "Y":
+            print("Yes option selected")
+            input_api_key=input("Enter your tinyfish api key for web search (https://agent.tinyfish.ai/): ")
+            with open(".env","w") as f:
+                f.write(f"tinyfish_key='{input_api_key}'")
+        else:
+            print("Selected No so exiting")
+            return "No api key provided"
+    else:
+        url="https://agent.tinyfish.ai/v1/search"
+        headers={
+            "X-API-Key":api_key
+        }
+        response_url=requests.get(url,headers=headers,params={"query":query})
+        url_generated=response_url.json()
+        url=url_generated["results"][0]["url"]
+        fetch = requests.post(
+                "https://agent.tinyfish.ai/v1/fetch",
+                headers=headers,
+                json={
+                    "urls": [url]
+                }
+            )
+        return fetch.json()
 @tool
 def open_application(app_name:str):
     """Use tool to open a application for eg : if users tells to open notepad give args notepad.exe"""
