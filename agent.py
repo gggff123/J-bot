@@ -3,7 +3,6 @@ import requests
 from urllib.parse import quote
 import shutil
 import os
-a=input("What do you want to do?: ")
 #-----------------------------------------
 # FILE OPERATIONS
 # ----------------------------------------
@@ -235,4 +234,17 @@ def web_search_wikipedia(qu:str):
     article=page.get("extract", "No extract found.")
 
     return article
-print(run_agent(a))
+@tool
+def open_application(app_name:str):
+    """Use tool to open a application for eg : if users tells to open notepad give args notepad.exe"""
+    os.startfile(app_name)
+    return f"Opened {app_name}"
+#CLI Intro art
+with open("jarvis.txt", encoding="utf-8") as f:
+    print(f.read())
+while True:
+    user_input=input("What do you want to do?: ")
+    if user_input == "exit" or user_input== "quit":
+        break
+    else:
+        response=run_agent(user_input)
