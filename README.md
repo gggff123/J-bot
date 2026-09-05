@@ -93,10 +93,9 @@ The goal is to make adding a new capability as simple as creating another tool.
 
 | Tool                  | Status |
 | :-------------------- | :----: |
-| 🌐 Web Search         |    ✅  |
-| 🌦️ Weather           |     ✅  |
-| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="24" height="24">
-Github          |   🟡   |
+| 🌐 Web Search         |   ✅   |
+| 🌦️ Weather            |   ✅   |
+| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" height="20"> GitHub | 🟡 |
 | 🧮 Calculator         |   🚧   |
 | 📁 File Operations    |   ✅   |
 | 💻 System Information |   🚧   |
