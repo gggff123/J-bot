@@ -1,2 +1,4 @@
-needle
+torch
 requests
+transformers
+dotenv
