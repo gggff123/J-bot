@@ -323,7 +323,7 @@ def github_search(query: str, search_type: str = "repositories"):
         return {"error": "Invalid search_type"}
 @tool
 def github_followers(username:str):
-    url="https://api.github.com/users/novastardev/followers"
+    url=f"https://api.github.com/users/{username}/followers"
     res=requests.get(url)
     store=res.json()
     name=[names["login"] for names in store]
