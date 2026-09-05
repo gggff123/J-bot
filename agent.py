@@ -208,6 +208,126 @@ def open_application(app_name:str):
     """Use tool to open a application for eg : if users tells to open notepad give args notepad.exe"""
     os.startfile(app_name)
     return f"Opened {app_name}"
+@tool
+def github_user(username:str):
+    """Get detailed public information about a GitHub user. Use when the user asks about a GitHub username, profile, account, followers, following, public repositories, bio, location, company, website, or account statistics."""
+    url="https://api.github.com/users/"+username
+    response=requests.get(url,timeout=10)
+    if response.status_code == 404:
+           return {"error": f"GitHub user '{username}' was not found."}
+
+    if response.status_code != 200:
+           return {
+               "error": f"GitHub API request failed with status {response.status_code}"
+           }
+    user_json=response.json()
+    name=user_json["login"]
+    avatar=user_json["avatar_url"]
+    bio=user_json["bio"]
+    repo=user_json["public_repos"]
+    followers=user_json["followers"]
+    following=user_json["following"]
+    return {
+        "Name":name,
+        "Avatar":avatar,
+        "Bio":bio,
+        "No_of_repos":repo,
+        "Followers":followers,
+        "Following":following
+    }
+@tool
+def github_users_repos(username:str):
+    """Get a list of repositories owned by a GitHub user. Use when the user asks what projects/repositories a user has, their repositories, or wants to inspect a user's projects."""
+    url=f"https://api.github.com/users/{username}/repos"
+    res=requests.get(url)
+    names=res.json()
+    repos = [
+        {
+            "name": repo["name"],
+            "description": repo["description"]
+        }
+        for repo in names
+    ]
+    return repos
+@tool
+def github_search(query: str, search_type: str = "repositories"):
+        """
+        Search GitHub for repositories, users, issues, or code.
+
+        Args:
+            query: What to search for.
+            search_type: One of "repositories", "users", "issues", or "code".
+        """
+
+        url = f"https://api.github.com/search/{search_type}"
+
+        response = requests.get(
+            url,
+            params={"q": query, "per_page": 10},
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return {
+                "error": f"GitHub API request failed: {response.status_code}"
+            }
+
+        data = response.json()
+
+        results = data.get("items", [])
+
+        if search_type == "repositories":
+            return [
+                {
+                    "name": repo.get("full_name"),
+                    "description": repo.get("description"),
+                    "language": repo.get("language"),
+                    "stars": repo.get("stargazers_count"),
+                    "url": repo.get("html_url")
+                }
+                for repo in results
+            ]
+
+        if search_type == "users":
+            return [
+                {
+                    "username": user.get("login"),
+                    "avatar": user.get("avatar_url"),
+                    "url": user.get("html_url")
+                }
+                for user in results
+            ]
+
+        if search_type == "issues":
+            return [
+                {
+                    "title": issue.get("title"),
+                    "repository": issue.get("repository_url"),
+                    "url": issue.get("html_url"),
+                    "state": issue.get("state")
+                }
+                for issue in results
+            ]
+
+        if search_type == "code":
+            return [
+                {
+                    "name": item.get("name"),
+                    "path": item.get("path"),
+                    "repository": item.get("repository", {}).get("full_name"),
+                    "url": item.get("html_url")
+                }
+                for item in results
+            ]
+
+        return {"error": "Invalid search_type"}
+@tool
+def github_followers(username:str):
+    url="https://api.github.com/users/novastardev/followers"
+    res=requests.get(url)
+    store=res.json()
+    name=[names["login"] for names in store]
+    return name
 #CLI Intro art
 with open("jarvis.txt", encoding="utf-8") as f:
     print(f.read())
