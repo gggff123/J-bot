@@ -95,7 +95,7 @@ The goal is to make adding a new capability as simple as creating another tool.
 | :-------------------- | :----: |
 | 🌐 Web Search         |    ✅  |
 | 🌦️ Weather           |     ✅  |
-| ![GitHub Octocat](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)
+| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="24" height="24">
 Github          |   🟡   |
 | 🧮 Calculator         |   🚧   |
 | 📁 File Operations    |   ✅   |
