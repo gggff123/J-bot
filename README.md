@@ -95,7 +95,8 @@ The goal is to make adding a new capability as simple as creating another tool.
 | :-------------------- | :----: |
 | 🌐 Web Search         |    ✅  |
 | 🌦️ Weather           |     ✅  |
-| ![GitHub Octocat](https://githubassets.com)  Automation          |   🟡   |
+| ![GitHub Octocat](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)
+Github          |   🟡   |
 | 🧮 Calculator         |   🚧   |
 | 📁 File Operations    |   ✅   |
 | 💻 System Information |   🚧   |
