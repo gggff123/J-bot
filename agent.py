@@ -3,8 +3,235 @@ import requests
 from urllib.parse import quote
 import shutil
 import os
+import json
 from dotenv import load_dotenv
 load_dotenv()
+
+MEMORY_FILE = "memory.json"
+
+def _load_memory():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def _save_memory(data):
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+#-----------------------------------------
+# CALCULATOR
+# ----------------------------------------
+@tool
+def calculate(expression:str):
+    """
+    Safely evaluate a mathematical expression and return the result.
+
+    Supports +, -, *, /, //, %, **, parentheses, and common math functions
+    such as sqrt, sin, cos, tan, log, log10, floor, ceil, pow, and constants
+    like pi and e.
+
+    Args:
+        expression: The mathematical expression to evaluate as a string.
+                    Example: "(3 + 5) * 2" or "sqrt(16) + pi"
+
+    Returns:
+        A dict with the numeric result, or an error dict if the expression
+        is invalid or uses a disallowed name.
+    """
+    import ast
+    import math
+
+    allowed_names = {
+        name: getattr(math, name)
+        for name in dir(math)
+        if not name.startswith("_")
+    }
+
+    try:
+        tree = ast.parse(expression, mode="eval")
+    except SyntaxError as e:
+        return {"error": f"Invalid expression: {e}"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id not in allowed_names:
+            return {"error": f"Disallowed name: {node.id}"}
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id not in allowed_names:
+                return {"error": f"Disallowed function: {node.func.id}"}
+
+    try:
+        result = eval(
+            compile(tree, "<calculate>", "eval"),
+            {"__builtins__": {}},
+            allowed_names,
+        )
+        return {"result": result}
+    except Exception as e:
+        return {"error": f"Calculation failed: {e}"}
+#-----------------------------------------
+# SYSTEM INFORMATION
+# ----------------------------------------
+@tool
+def system_info(info_type:str="all"):
+    """
+    Get information about the current system.
+
+    Args:
+        info_type: What system information to return. One of:
+            "all"     - return everything (default)
+            "os"      - operating system name, release, and version
+            "cpu"     - CPU count and machine type
+            "memory"  - RAM usage (requires psutil; falls back gracefully)
+            "disk"    - disk usage for the current working drive (requires psutil)
+            "python"  - Python version and hostname
+
+    Returns:
+        A dict with the requested system information.
+    """
+    import platform
+
+    if info_type == "os":
+        return {
+            "system": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "machine": platform.machine(),
+        }
+
+    if info_type == "cpu":
+        return {
+            "cpu_count": os.cpu_count(),
+            "machine": platform.machine(),
+        }
+
+    if info_type == "memory":
+        try:
+            import psutil
+            vm = psutil.virtual_memory()
+            return {
+                "total_gb": round(vm.total / (1024**3), 2),
+                "available_gb": round(vm.available / (1024**3), 2),
+                "percent_used": vm.percent,
+            }
+        except ImportError:
+            return {
+                "error": "psutil is not installed. Run 'pip install psutil' to enable memory info."
+            }
+
+    if info_type == "disk":
+        try:
+            import psutil
+            du = psutil.disk_usage(os.getcwd())
+            return {
+                "total_gb": round(du.total / (1024**3), 2),
+                "used_gb": round(du.used / (1024**3), 2),
+                "free_gb": round(du.free / (1024**3), 2),
+                "percent_used": du.percent,
+            }
+        except ImportError:
+            return {
+                "error": "psutil is not installed. Run 'pip install psutil' to enable disk info."
+            }
+
+    if info_type == "python":
+        return {
+            "python_version": platform.python_version(),
+            "hostname": platform.node(),
+        }
+
+    # Default: return everything
+    info = {
+        "system": platform.system(),
+        "release": platform.release(),
+        "machine": platform.machine(),
+        "cpu_count": os.cpu_count(),
+        "python_version": platform.python_version(),
+        "hostname": platform.node(),
+    }
+
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        info["memory_total_gb"] = round(vm.total / (1024**3), 2)
+        info["memory_percent_used"] = vm.percent
+        du = psutil.disk_usage(os.getcwd())
+        info["disk_total_gb"] = round(du.total / (1024**3), 2)
+        info["disk_percent_used"] = du.percent
+    except ImportError:
+        info["note"] = "psutil not installed; memory/disk details omitted."
+
+    return info
+#-----------------------------------------
+# MEMORY (lightweight recall)
+# ----------------------------------------
+@tool
+def remember(key:str, value:str):
+    """
+    Store a fact under a short key so it can be recalled later.
+
+    Use this when the user explicitly asks you to remember something,
+    or when you learn a reusable fact worth keeping across sessions.
+
+    Args:
+        key:   A short, stable name for the fact (e.g. "user_name").
+        value: The fact itself.
+
+    Returns:
+        A confirmation string.
+    """
+    data = _load_memory()
+    data[key] = value
+    _save_memory(data)
+    return f"Remembered '{key}'."
+
+@tool
+def recall(key:str):
+    """
+    Recall a previously stored fact by its key.
+
+    Use this only when you actually need the fact. Memory is NOT loaded
+    automatically, so the context stays small for faster responses.
+
+    Args:
+        key: The exact key passed to remember() earlier.
+
+    Returns:
+        The stored value, or a message saying no memory was found.
+    """
+    data = _load_memory()
+    if key in data:
+        return data[key]
+    return f"No memory found for key '{key}'."
+
+@tool
+def forget(key:str):
+    """
+    Delete a stored fact by its key.
+
+    Args:
+        key: The exact key to remove.
+
+    Returns:
+        A confirmation string.
+    """
+    data = _load_memory()
+    if key in data:
+        del data[key]
+        _save_memory(data)
+        return f"Forgot '{key}'."
+    return f"No memory found for key '{key}'."
+
+@tool
+def list_memories():
+    """
+    Return every stored memory as a JSON object.
+
+    Use this when the user asks what you remember.
+    """
+    data = _load_memory()
+    if not data:
+        return "No memories stored yet."
+    return json.dumps(data, indent=2)
 #-----------------------------------------
 # FILE OPERATIONS
 # ----------------------------------------

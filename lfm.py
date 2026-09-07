@@ -221,3 +221,56 @@ def run_agent(user_input):
                 "name": call["name"],
                 "content": result,
             })
+
+
+def run_agent_loop(goal: str, max_steps: int = 5):
+    """
+    Decompose a high-level goal into smaller, concrete steps, execute them
+    one after another, and feed the result of each step into the next.
+
+    This is the multi-step autonomous mode: the agent plans first, then acts.
+    """
+    planning_messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an autonomous planning agent. Break the goal into a "
+                "numbered list of concrete, self-contained steps. Output ONLY "
+                "the numbered list, one step per line."
+            ),
+        },
+        {"role": "user", "content": goal},
+    ]
+
+    plan_text = generate(planning_messages)
+    print("\nPLAN:")
+    print(plan_text)
+
+    steps = []
+    for line in plan_text.splitlines():
+        line = line.strip()
+        match = re.match(r"^\s*(?:\d+[.)]\s*|[-*]\s+)(.+)$", line)
+        if match:
+            steps.append(match.group(1))
+
+    if not steps:
+        steps = [goal]
+
+    steps = steps[:max_steps]
+
+    context = ""
+    last_result = ""
+
+    for i, step in enumerate(steps, 1):
+        print(f"\n=== STEP {i}/{len(steps)}: {step} ===")
+        prompt = step
+        if context:
+            prompt = (
+                "Results from previous steps:\n"
+                f"{context}\n\n"
+                f"Now complete this step: {step}"
+            )
+        last_result = run_agent(prompt)
+        context += f"Step {i}: {last_result}\n"
+
+    return last_result
