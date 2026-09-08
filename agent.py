@@ -6,6 +6,7 @@ import os
 import json
 from dotenv import load_dotenv
 load_dotenv()
+from jbot_ui import render_reply, render_user_message, print_help, send_notification
 
 MEMORY_FILE = "memory.json"
 
@@ -555,12 +556,150 @@ def github_followers(username:str):
     store=res.json()
     name=[names["login"] for names in store]
     return name
+
+#-----------------------------------------
+# NEWS
+# ----------------------------------------
+@tool
+def get_news(country: str = "us", category: str = None):
+    """
+    Get top news headlines from NewsAPI.
+
+    Args:
+        country: 2-letter country code (default: us).
+        category: Optional category: business, entertainment, general, health, science, sports, technology.
+
+    Returns:
+        A list of news articles with title, description, and URL.
+    """
+    api_key = os.getenv("news_api_key")
+    if not api_key:
+        return "Error: news_api_key not set in .env. Get a free key at https://newsapi.org/"
+    url = "https://newsapi.org/v2/top-headlines"
+    params = {
+        "country": country,
+        "apiKey": api_key
+    }
+    if category:
+        params["category"] = category
+    response = requests.get(url, params=params, timeout=10)
+    if response.status_code != 200:
+        return f"News API error: {response.status_code}"
+    data = response.json()
+    articles = data.get("articles", [])
+    if not articles:
+        return "No news found."
+    # Return a concise list
+    return [
+        {
+            "title": article.get("title"),
+            "description": article.get("description"),
+            "url": article.get("url")
+        }
+        for article in articles[:5]
+    ]
+
+#-----------------------------------------
+# TRANSLATION
+# ----------------------------------------
+@tool
+def translate_text(text: str, target_lang: str, source_lang: str = "auto"):
+    """
+    Translate text from source_lang to target_lang using LibreTranslate (free, no key).
+
+    Args:
+        text: The text to translate.
+        target_lang: Target language code (e.g., 'es', 'fr', 'de').
+        source_lang: Source language code or 'auto' (default).
+
+    Returns:
+        Translated text.
+    """
+    url = "https://libretranslate.com/translate"
+    payload = {
+        "q": text,
+        "source": source_lang,
+        "target": target_lang,
+        "format": "text"
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("translatedText", "Translation failed.")
+        else:
+            return f"Translation error: {response.status_code}"
+    except Exception as e:
+        return f"Translation error: {e}"
+
+#-----------------------------------------
+# STOCK PRICE
+# ----------------------------------------
+@tool
+def get_stock_price(symbol: str):
+    """
+    Get the current stock price for a given symbol using yfinance.
+
+    Args:
+        symbol: Stock ticker (e.g., 'AAPL', 'GOOGL').
+
+    Returns:
+        A dict with price and other info, or an error message.
+    """
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        price = info.get("regularMarketPrice")
+        if price is None:
+            return f"Could not retrieve price for {symbol}."
+        return {
+            "symbol": symbol,
+            "price": price,
+            "currency": info.get("currency", "USD"),
+            "name": info.get("longName", symbol)
+        }
+    except ImportError:
+        return "Error: yfinance is not installed. Run 'pip install yfinance'."
+    except Exception as e:
+        return f"Error fetching stock price: {e}"
+
+#-----------------------------------------
+# WIKIPEDIA SUMMARY
+# ----------------------------------------
+@tool
+def wikipedia_summary(query: str, sentences: int = 3):
+    """
+    Get a short summary from Wikipedia for the given query.
+
+    Args:
+        query: The topic to search for.
+        sentences: Number of sentences to return (default 3).
+
+    Returns:
+        A summary string, or an error message.
+    """
+    try:
+        import wikipedia
+        summary = wikipedia.summary(query, sentences=sentences)
+        return summary
+    except wikipedia.exceptions.DisambiguationError as e:
+        return f"Disambiguation: {e.options[:5]} ... Try a more specific query."
+    except wikipedia.exceptions.PageError:
+        return f"No Wikipedia page found for '{query}'."
+    except ImportError:
+        return "Error: wikipedia library not installed. Run 'pip install wikipedia'."
+    except Exception as e:
+        return f"Error: {e}"
+
 #CLI Intro art
 with open("jarvis.txt", encoding="utf-8") as f:
     print(f.read())
+
+# Main loop with Nova X-style UI
 while True:
-    user_input=input("What do you want to do?: ")
-    if user_input == "exit" or user_input== "quit":
+    user_input = input("What do you want to do?: ")
+    if user_input.lower() in ["exit", "quit"]:
         break
-    else:
-        response=run_agent(user_input)
+    render_user_message(user_input)
+    response = run_agent(user_input)
+    render_reply(response)

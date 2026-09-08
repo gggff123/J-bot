@@ -1,4 +1,7 @@
 torch
-requests
 transformers
-dotenv
+requests
+python-dotenv
+psutil
+yfinance
+wikipedia
