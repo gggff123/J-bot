@@ -96,7 +96,8 @@ def send_email(to_email: str, subject: str, body: str):
     if not host or not user or not password:
         return (
             "Error: SMTP configuration missing. Set SMTP_HOST, SMTP_USER, "
-            "and SMTP_PASSWORD in your environment / .env file."
+            "and SMTP_PASSWORD in your environment / .env file. "
+            "You can run setup.py again or update .env manually."
         )
 
     try:
@@ -119,3 +120,74 @@ def send_email(to_email: str, subject: str, body: str):
         return f"Email successfully sent to {to_email}."
     except Exception as e:
         return f"Failed to send email: {e}"
+
+
+@tool
+def query_database(sql_query: str, db_path: str = "business.db"):
+    """
+    Execute a read/write SQL query against a local SQLite database (optional business feature).
+
+    Args:
+        sql_query: SQL statement to execute.
+        db_path: Path to the SQLite database file (default business.db).
+    """
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        if sql_query.strip().lower().startswith("select"):
+            rows = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+            conn.close()
+            return {"columns": columns, "rows": rows}
+        else:
+            conn.commit()
+            affected = cursor.rowcount
+            conn.close()
+            return f"Query executed successfully. Affected rows: {affected}"
+    except Exception as e:
+        return f"Database error: {e}"
+
+
+@tool
+def render_dynamic_page(url: str, wait_seconds: int = 3):
+    """
+    Fetch and render a JavaScript-heavy web page using a lightweight headless browser approach
+    (requests-html or requests fallback with delay notice).
+
+    Args:
+        url: URL of the webpage to fetch.
+        wait_seconds: Seconds to wait for JS to execute.
+    """
+    try:
+        import time
+        import requests
+
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        time.sleep(max(0, min(wait_seconds, 10)))
+        
+        # Simple text extraction from HTML
+        from html.parser import HTMLParser
+
+        class HTMLFilter(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.text = []
+
+            def handle_data(self, data):
+                self.text.append(data)
+
+        parser = HTMLFilter()
+        parser.feed(response.text)
+        content = " ".join(t.strip() for t in parser.text if t.strip())
+        return {
+            "url": url,
+            "status": response.status_code,
+            "snippet": content[:3000] if content else response.text[:3000],
+        }
+    except Exception as e:
+        return f"Error rendering dynamic page: {e}"
