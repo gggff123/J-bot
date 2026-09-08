@@ -8,7 +8,7 @@ An extensible Python AI assistant built around tool calling. J-bot decides when 
 - Native OpenAI-style tool calling (no regex parsing of tool calls)
 - Conversation history across turns
 - Sandboxed file tools (no Windows-only `os.startfile`, no interactive `input()` inside tools)
-- Terminal TUI (Nova X-style green you / magenta J-BOT panels)
+- Terminal TUI (green you / magenta J-BOT panels)
 - Unused `torch` / `transformers` removed; configure any OpenAI-compatible LLM
 - Persistent memory: remember facts across conversations with `/memorize` and `/recall`
 
