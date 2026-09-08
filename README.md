@@ -25,6 +25,12 @@ python setup.py
 
 `setup.py` will guide you through configuring your LLM provider (local Ollama/LM Studio or custom/remote API) and optional tool credentials.
 
+### Termux Specific Notes
+In Termux, if you encounter issues installing `cryptography`, you can:
+1. Use the system package manager: `pkg install python-cryptography`
+2. Or install pre-compiled binaries: `pip install --only-binary :all: cryptography`
+3. The encrypted vault features will be unavailable if cryptography is not installed, but all other features will work normally
+
 ## Run
 
 ```bash

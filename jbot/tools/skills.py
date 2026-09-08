@@ -6,11 +6,18 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from jbot.tools.registry import tool
 from jbot.config import SESSIONS_DIR
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
-import secrets
+
+# Optional cryptography for encrypted vault
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    import base64
+    import secrets
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError:
+    CRYPTOGRAPHY_AVAILABLE = False
+    Fernet = None
 
 
 # -----------------------
@@ -24,6 +31,10 @@ _ITERATIONS = 100000
 
 def _get_or_create_key():
     """Return encryption key, creating it if missing."""
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return None
+    # Ensure sessions directory exists
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     if _KEY_FILE.exists():
         key = _KEY_FILE.read_bytes()
     else:
@@ -34,16 +45,28 @@ def _get_or_create_key():
 
 
 def _encrypt(data: str) -> bytes:
+    if not CRYPTOGRAPHY_AVAILABLE:
+        raise ImportError("Cryptography module not available for encrypted vault")
+    # Ensure sessions directory exists
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     f = Fernet(_get_or_create_key())
     return f.encrypt(data.encode("utf-8"))
 
 
 def _decrypt(data: bytes) -> str:
+    if not CRYPTOGRAPHY_AVAILABLE:
+        raise ImportError("Cryptography module not available for encrypted vault")
+    # Ensure sessions directory exists
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     f = Fernet(_get_or_create_key())
     return f.decrypt(data).decode("utf-8")
 
 
 def _load_vault():
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return {}
+    # Ensure sessions directory exists
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     if not _VAULT_FILE.exists():
         return {}
     try:
@@ -53,6 +76,10 @@ def _load_vault():
 
 
 def _save_vault(data):
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return
+    # Ensure sessions directory exists
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     _VAULT_FILE.write_bytes(_encrypt(json.dumps(data, indent=2)))
     _VAULT_FILE.chmod(0o600)
 
@@ -62,11 +89,16 @@ def vault_set(key: str, value: str):
     """
     Store a secret in the encrypted vault (protected at rest).
     Use for API keys, passwords, or sensitive tokens you don't want in .env or history.
-
+    
+    Requires cryptography module to be installed.
+    
     Args:
         key: Identifier for the secret (e.g. "github_token").
         value: The secret value.
     """
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return "Error: Cryptography module not available. Install with: pip install cryptography"
+    
     data = _load_vault()
     data[key] = value
     _save_vault(data)
@@ -77,10 +109,15 @@ def vault_set(key: str, value: str):
 def vault_get(key: str):
     """
     Retrieve a secret from the encrypted vault.
-
+    
+    Requires cryptography module to be installed.
+    
     Args:
         key: Identifier for the secret.
     """
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return "Error: Cryptography module not available. Install with: pip install cryptography"
+    
     data = _load_vault()
     if key in data:
         # Mask output in logs/TUI by default—caller decides whether to show
@@ -92,7 +129,12 @@ def vault_get(key: str):
 def vault_list():
     """
     List all keys stored in the encrypted vault (values hidden).
+    
+    Requires cryptography module to be installed.
     """
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return "Error: Cryptography module not available. Install with: pip install cryptography"
+    
     data = _load_vault()
     if not data:
         return "Vault is empty."
@@ -106,7 +148,12 @@ def vault_delete(key: str):
 
     Args:
         key: Identifier to remove.
+        
+    Requires cryptography module to be installed.
     """
+    if not CRYPTOGRAPHY_AVAILABLE:
+        return "Error: Cryptography module not available. Install with: pip install cryptography"
+    
     data = _load_vault()
     if key in data:
         del data[key]
