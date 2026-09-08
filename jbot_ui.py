@@ -8,6 +8,7 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.live import Live
+    from rich.markdown import Markdown
     from rich import box
 except ImportError:
     print("Missing dependency 'rich'. Install with: pip install rich")
@@ -28,12 +29,12 @@ def render_user_message(user_input: str):
     ))
 
 # ---------------------------------------------------------------------
-# Assistant reply rendering (magenta panel, typewriter effect) — matches Nova X exactly
+# Assistant reply rendering (magenta panel, rich markdown support) — matches Nova X exactly
 # ---------------------------------------------------------------------
 def render_reply(reply: str):
     """
-    Renders an AI reply, splitting out code blocks into plain, unboxed text
-    so they can be copied cleanly without box-drawing characters.
+    Renders an AI reply, splitting out code blocks and rendering prose as Markdown
+    inside a rich panel.
     """
     import re
 
@@ -70,31 +71,15 @@ def _render_prose_panel(text: str):
     if not text:
         return
 
-    out = ""
+    md = Markdown(text)
     panel = Panel(
-        out,
+        md,
         title="[bold magenta]J-BOT[/bold magenta]",
         title_align="left",
         border_style="magenta",
         box=box.ROUNDED,
     )
-
-    with Live(panel, console=console, refresh_per_second=30, transient=False) as live:
-        for char in text:
-            out += char
-            panel = Panel(
-                out,
-                title="[bold magenta]J-BOT[/bold magenta]",
-                title_align="left",
-                border_style="magenta",
-                box=box.ROUNDED,
-            )
-            live.update(panel)
-
-            if random.random() < 0.7:
-                time.sleep(0.008)
-            else:
-                time.sleep(0.04)
+    console.print(panel)
 
 # ---------------------------------------------------------------------
 # Help table — clean, aligned, matches Nova X's style
