@@ -43,7 +43,7 @@ Ctrl+C cancels the current run. Ctrl+Q quits. Replies stream. Deletes ask `y`/`n
 
 ## Tools
 
-calculate, system_info, remember / recall / forget / list_memories, create_file / read_file / list_files / move_file / copy_file / remove_file, get_weather, web_search, web_fetch, run_shell, github_user / github_users_repos / github_search / github_followers, get_news, translate_text, get_stock_price, wikipedia_summary.
+calculate, system_info, remember / recall / forget / list_memories, read_spreadsheet / write_csv / calculate_roi / send_email, create_file / read_file / list_files / move_file / copy_file / remove_file, get_weather, web_search, web_fetch, run_shell, github_user / github_users_repos / github_search / github_followers, get_news, translate_text, get_stock_price, wikipedia_summary.
 
 File tools stay inside `JBOT_SANDBOX` (project root by default).
 
