@@ -17,6 +17,9 @@ ENV/
 
 # Test / temp junk
 memory_test.json
+memory.json
+history.json
+sessions/
 *.log
 *.tmp
 
