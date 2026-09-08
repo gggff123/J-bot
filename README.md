@@ -20,16 +20,10 @@ USER -> J-BOT AGENT -> optional TOOL -> TOOL RESULT -> RESPONSE
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env
+python setup.py
 ```
 
-Edit `.env` and set `USER_LLM_API_KEY` (and optionally `USER_LLM_BASE_URL` / `USER_LLM_MODEL`).
-
-Optional keys:
-
-- `NEWS_API_KEY` for NewsAPI headlines (otherwise Hacker News is used)
-- `TINYFISH_KEY` for richer web search (otherwise DuckDuckGo instant answers)
-- `PAXSENIX_API_KEY` for additional search options
+`setup.py` will guide you through configuring your LLM provider (local Ollama/LM Studio or custom/remote API) and optional tool credentials.
 
 ## Run
 
