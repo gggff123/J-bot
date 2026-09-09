@@ -1,142 +1,96 @@
 # J-Bot 🤖
 
-**An extensible Python AI agent that thinks, plans, and gets things done.**
+An extensible Python AI assistant built around tool calling. J-bot decides when it needs an external capability, calls a tool, and uses the result to answer.
 
-J-bot is a modular AI assistant framework built around intelligent tool calling. It decides when it needs external capabilities, calls the right tool, and uses results to deliver accurate answers. Perfect for automation, research, and interactive workflows.
+## What's New in v3
 
----
+- ✅ Modular package (`jbot/`) instead of one large script
+- ✅ Native OpenAI-style tool calling (no regex parsing)
+- ✅ Conversation history across turns
+- ✅ Sandboxed file tools (cross-platform safe)
+- ✅ Terminal TUI (green you / magenta J-BOT panels)
+- ✅ Flexible LLM support (any OpenAI-compatible provider)
+- ✅ Persistent memory with `/memorize` and `/recall`
+- ✅ Lightweight (removed `torch` / `transformers`)
 
-## 🌟 Key Features
+```text
+USER → J-BOT AGENT → optional TOOL → TOOL RESULT → RESPONSE
+```
 
-- **🔧 Native Tool Calling** – OpenAI-style function calling with 30+ built-in tools
-- **💭 Multi-Step Reasoning** – Autonomous planning and execution of complex goals  
-- **📝 Persistent Memory** – Remember facts and recall details across sessions with `/memorize` and `/recall`
-- **💬 Conversation History** – Maintain context across multiple turns (configurable, default 20 messages)
-- **🎨 Terminal UI** – Full-screen TUI with green/magenta panels and real-time streaming
-- **🔓 Flexible LLM Support** – Works with any OpenAI-compatible API (Inception Labs, OpenAI, Groq, local Ollama/LM Studio)
-- **🔒 Sandboxed Tools** – File operations stay within configured sandbox directory
-- **⚡ Zero Lock-in** – Modular Python package; extend with custom tools easily
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.7+
-- An LLM API key (optional – can use local Ollama/LM Studio)
+## Quick Start
 
 ### Installation
 
 ```bash
-# Clone and install dependencies
-git clone https://github.com/novastardev/J-bot.git
-cd J-bot
 pip install -r requirements.txt
-```
-
-### Configuration
-
-Run the interactive setup wizard:
-
-```bash
 python setup.py
 ```
 
-This will guide you through:
-1. **LLM Provider** – Choose between:
-   - Custom/Remote API (Inception Labs, OpenAI, Groq, etc.)
-   - Existing local LLM (Ollama/LM Studio already running)
-   - Auto-setup local model (installs Ollama and pulls a model)
-2. **Optional SMTP** – For email sending capabilities
+`setup.py` guides you through:
+- LLM provider configuration (local Ollama/LM Studio or custom/remote API)
+- Optional SMTP credentials for email tools
 
-The wizard creates a `.env` file with your configuration.
-
-### Running J-Bot
+### Run
 
 ```bash
 python -m jbot
 ```
 
-Opens an interactive terminal interface. Type messages and watch the agent reason and use tools in real-time.
+Opens an interactive full-screen TUI. Type your queries and watch the agent reason in real-time.
 
----
+### Commands
 
-## 📋 Commands
-
-Once inside J-Bot, use these commands:
-
-| Command | Description |
-|---------|-------------|
-| `/help` | Show all available commands |
-| `/tools` | List all registered tools |
-| `/search <query>` | Web search |
-| `/clear` | Clear conversation history |
-| `/mem` | Show current memory |
-| `/memorize <key> <value>` | Store a fact permanently |
-| `/recall <key>` | Retrieve a stored fact |
-| `/save <name>` | Save current session |
-| `/load <name>` | Load a previous session |
-| `/sessions` | List saved sessions |
-| `/plan <goal>` | Create and execute a multi-step plan |
+- `/help` - Show all available commands
+- `/tools` - List registered tools
+- `/search <query>` - Web search
+- `/clear` - Clear conversation history
+- `/mem` - Show current memory
+- `/memorize <key> <value>` - Store a fact permanently
+- `/recall <key>` - Retrieve a stored fact
+- `/save <name>` - Save current session
+- `/load <name>` - Load a previous session
+- `/sessions` - List saved sessions
+- `/plan <goal>` - Create and execute a multi-step plan
 
 **Keyboard Shortcuts:**
-- **Ctrl+C** – Cancel current operation
-- **Ctrl+Q** – Quit J-Bot
-- **y/n** – Confirm/deny file deletions
+- `Ctrl+C` - Cancel current operation
+- `Ctrl+Q` - Quit
+- `Y/N` - Confirm/deny deletions
 
----
+## Tools (30+)
 
-## 🛠️ Built-In Tools
+### Data & Analysis
+`calculate` • `read_spreadsheet` • `write_csv` • `calculate_roi` • `remember` • `recall` • `forget` • `list_memories`
 
-J-Bot includes 30+ tools across these categories:
+### Web & API
+`search` • `fetch_page` • `get_weather` • `get_news` • `get_github_info` • `wikipedia_search` • `get_stock_price`
 
-### 📊 Data & Analysis
-- `calculate` – Math expressions
-- `read_spreadsheet`, `write_csv` – File I/O
-- `calculate_roi` – Financial calculations
-- `remember`, `recall`, `forget`, `list_memories` – Persistent memory
+### Communication
+`send_email` • `send_notification` • `speak_text`
 
-### 🌐 Web & API
-- `search` – Web search
-- `fetch_page` – Fetch webpage content
-- `get_weather` – Weather lookup
-- `get_news` – Latest news
-- `get_github_info` – GitHub repo/user details
-- `wikipedia_search` – Wikipedia lookup
-- `get_stock_price` – Stock market data
+### System & Files
+`system_info` • `read_file` • `write_file` • `remove_file` • `shell_run`
 
-### 📧 Communication
-- `send_email` – SMTP email (requires configuration)
-- `send_notification` – System notifications
-- `speak_text` – Text-to-speech
+### Security
+`vault_set` • `vault_get` • `vault_list` (requires `cryptography`)
 
-### 🖥️ System & Files
-- `system_info` – OS/CPU/memory details
-- `read_file`, `write_file`, `remove_file` – File operations (sandboxed)
-- `shell_run` – Execute shell commands (sandboxed)
+### Language
+`translate_text`
 
-### 🔐 Security
-- `vault_set`, `vault_get`, `vault_list` – Encrypted credential storage (requires `cryptography`)
+**Note:** All file operations stay inside `JBOT_SANDBOX` (project root by default).
 
-### 🌍 Language & Translation
-- `translate_text` – Multi-language translation
+## Configuration
 
-**Note:** All file operations are confined to `JBOT_SANDBOX` (project root by default).
-
----
-
-## ⚙️ Configuration
-
-Edit `.env` to customize behavior:
+After running `setup.py`, edit `.env`:
 
 ```env
-# LLM Setup (required)
+# LLM Setup (Required)
 USER_LLM_API_KEY=your-api-key
 USER_LLM_BASE_URL=https://api.inceptionlabs.ai/v1
 USER_LLM_MODEL=mercury-2
 
-# Runtime Limits
-JBOT_SANDBOX=.                    # Sandbox directory for file ops
+# Runtime Settings
+JBOT_SANDBOX=.                    # Sandbox directory
 JBOT_MAX_STEPS=8                  # Max tool calls per query
 JBOT_TIMEOUT=60                   # Request timeout (seconds)
 JBOT_TEMPERATURE=0.2              # LLM creativity (0.0-1.0)
@@ -149,45 +103,20 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-password
 ```
 
----
-
-## 📦 Architecture
+## Project Structure
 
 ```
-jbot/                   # Main package
-  ├── agent.py         # Core reasoning loop
-  ├── llm.py           # LLM client (OpenAI-compatible)
-  ├── cli.py           # Terminal UI and commands
-  ├── config.py        # Configuration loading
-  ├── tools/           # Tool implementations
-  │   ├── registry.py  # Tool registration
-  │   ├── memory.py    # Persistent memory
-  │   ├── web.py       # Web search & fetch
-  │   ├── files.py     # File operations
-  │   └── ...          # Other tools
-  └── ui/              # Terminal UI components
-
-agent.py                # Backward-compatible CLI entry
-setup.py                # Interactive setup wizard
-requirements.txt        # Python dependencies
-tests/                  # Unit tests
+jbot/                   agent runtime, LLM client, tools, terminal UI
+agent.py                CLI entry (backward compatible)
+lfm.py                  compatibility shim
+tests/                  unit tests
+setup.py                interactive setup wizard
+requirements.txt        Python dependencies
 ```
 
----
+## Extending J-Bot
 
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-python -m pytest tests -q
-```
-
----
-
-## 🔧 Extending J-Bot
-
-### Adding Custom Tools
+### Add Custom Tools
 
 Create a tool in `jbot/tools/`:
 
@@ -201,95 +130,41 @@ def my_tool(param1: str, param2: int = 10) -> str:
     
     Args:
         param1: Description of param1
-        param2: Description of param2
+        param2: Description of param2 (optional)
     
     Returns:
         Result as a string
     """
-    return f"Result: {param1} * {param2}"
+    return f"Result: {param1} × {param2}"
 ```
 
-The `@tool` decorator automatically registers it with the agent.
+The `@tool` decorator automatically registers it!
 
----
-
-## ⚠️ Platform-Specific Notes
-
-### Termux (Android)
-
-If `cryptography` installation fails:
+## Testing
 
 ```bash
-# Option 1: Use system package manager
-pkg install python-cryptography
-
-# Option 2: Install pre-compiled binaries
-pip install --only-binary :all: cryptography
+python -m pytest tests -q
 ```
 
-**Note:** Without `cryptography`, vault features are unavailable, but all other tools work normally.
+## Termux (Android) Notes
+
+If you encounter issues installing `cryptography`:
+
+1. Use system package manager: `pkg install python-cryptography`
+2. Or install pre-compiled binaries: `pip install --only-binary :all: cryptography`
+3. Without cryptography, vault features will be unavailable, but all other features work normally
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+## Support
+
+- **Issues:** [Report bugs](https://github.com/novastardev/J-bot/issues)
+- **Discussions:** [Ask questions](https://github.com/novastardev/J-bot/discussions)
+- **Docs:** Check docstrings in `jbot/` code
+- **Examples:** See tool implementations
 
 ---
 
-## 📊 What Changed in v3
-
-- ✅ **Modular package** – `jbot/` module instead of monolithic script
-- ✅ **Native OpenAI-style tool calling** – No regex parsing required
-- ✅ **Conversation history** – Persistent context across turns
-- ✅ **Sandboxed file tools** – Safe, cross-platform file operations
-- ✅ **Terminal TUI** – Rich, interactive interface
-- ✅ **Flexible LLM support** – Works with any OpenAI-compatible provider
-- ✅ **Persistent memory** – `/memorize` and `/recall` commands
-- ✅ **Lightweight** – Removed `torch`/`transformers` dependencies
-
----
-
-## 🔄 How It Works
-
-```
-USER INPUT
-    ↓
-J-BOT AGENT (analyzes & reasons)
-    ↓
-NEEDS TOOL? 
-    ├─ YES → EXECUTE TOOL → GET RESULT → LOOP BACK
-    └─ NO → GENERATE RESPONSE
-    ↓
-FINAL ANSWER
-```
-
-The agent maintains conversation history, can recall facts from memory, and autonomously decides whether tools are needed.
-
----
-
-## 📝 License
-
-MIT License – See [LICENSE](LICENSE) for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Fork the repo, create a feature branch, and submit a pull request.
-
----
-
-## 📞 Support
-
-- **Issues:** Report bugs via GitHub Issues
-- **Questions:** Check existing discussions or create a new one
-- **Docs:** See `jbot/` docstrings and tool implementations for examples
-
----
-
-## 🎯 Use Cases
-
-- **Research Assistant** – Gather info, summarize findings, save to files
-- **Automation** – Execute multi-step tasks, interact with APIs
-- **Productivity** – Email, reminders, file management
-- **Learning** – Explore concepts with tools and references
-- **Custom Agents** – Extend with your own tools for specific workflows
-
----
-
-**Made with ❤️ by the J-Bot community**
+Made with ❤️ by the J-Bot Community
