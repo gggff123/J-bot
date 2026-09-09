@@ -328,6 +328,18 @@ def github_followers(username:str):
     store=res.json()
     name=[names["login"] for names in store]
     return name
+@tool
+def get_issue_comments(repo_name:str,issue:int):
+    url=f"https://api.github.com/repos/{repo_name}/issues/{issue}/comments"
+    res=requests.get(url)
+    store=res.json()
+    for comment in store:
+       return { "User:", comment["user"]["login"],
+           "Comment:", comment["body"],
+                "URL:", comment["html_url"],
+             "-" * 50
+       }
+
 #CLI Intro art
 with open("jarvis.txt", encoding="utf-8") as f:
     print(f.read())
