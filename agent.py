@@ -1,5 +1,5 @@
 from lfm import tool,run_agent
-import wrequests
+import requests
 from urllib.parse import quote
 import shutil
 import os
@@ -163,12 +163,12 @@ def get_weather(location:str):
             "It's 31°C in Kolkata right now"
         """
     url=f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
-    result=wrequests.get(url)
+    result=requests.get(url)
     a=result.json()
     latitude=a["results"][0]["latitude"]
     longitude=a["results"][0]["longitude"]
     url_weather=f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m"
-    weather=wrequests.get(url_weather)
+    weather=requests.get(url_weather)
     b=weather.json()
     temp=b['current']['temperature_2m']
     wind=b['current']['wind_speed_10m']
@@ -192,10 +192,10 @@ def web_search(query:str):
         headers={
             "X-API-Key":api_key
         }
-        response_url=wrequests.get(url,headers=headers,params={"query":query})
+        response_url=requests.get(url,headers=headers,params={"query":query})
         url_generated=response_url.json()
         url=url_generated["results"][0]["url"]
-        fetch = wrequests.post(
+        fetch = requests.post(
                 "https://agent.tinyfish.ai/v1/fetch",
                 headers=headers,
                 json={
@@ -212,7 +212,7 @@ def open_application(app_name:str):
 def github_user(username:str):
     """Get detailed public information about a GitHub user. Use when the user asks about a GitHub username, profile, account, followers, following, public repositories, bio, location, company, website, or account statistics."""
     url="https://api.github.com/users/"+username
-    response=wrequests.get(url,timeout=10)
+    response=requests.get(url,timeout=10)
     if response.status_code == 404:
            return {"error": f"GitHub user '{username}' was not found."}
 
@@ -239,7 +239,7 @@ def github_user(username:str):
 def github_users_repos(username:str):
     """Get a list of repositories owned by a GitHub user. Use when the user asks what projects/repositories a user has, their repositories, or wants to inspect a user's projects."""
     url=f"https://api.github.com/users/{username}/repos"
-    res=wrequests.get(url)
+    res=requests.get(url)
     names=res.json()
     repos = [
         {
@@ -261,7 +261,7 @@ def github_search(query: str, search_type: str = "repositories"):
 
         url = f"https://api.github.com/search/{search_type}"
 
-        response = wrequests.get(
+        response = requests.get(
             url,
             params={"q": query, "per_page": 10},
             timeout=10
@@ -324,14 +324,14 @@ def github_search(query: str, search_type: str = "repositories"):
 @tool
 def github_followers(username:str):
     url=f"https://api.github.com/users/{username}/followers"
-    res=wrequests.get(url)
+    res=requests.get(url)
     store=res.json()
     name=[names["login"] for names in store]
     return name
 @tool
 def get_issue_comments(repo_name:str,issue:int):
     url=f"https://api.github.com/repos/{repo_name}/issues/{issue}/comments"
-    res=wrequests.get(url)
+    res=requests.get(url)
     store=res.json()
     for comment in store:
        return { "User:", comment["user"]["login"],
@@ -339,6 +339,15 @@ def get_issue_comments(repo_name:str,issue:int):
                 "URL:", comment["html_url"],
              "-" * 50
        }
+@tool
+def advice():
+    """Return an advice if the user asks for it"""
+    url="https://api.adviceslip.com/advice"
+    res=requests.get(url)
+    a=res.json()
+    return {
+        "Advice":a["slip"]["advice"]
+    }
 
 #CLI Intro art
 with open("jarvis.txt", encoding="utf-8") as f:
