@@ -148,7 +148,7 @@ def copy_file(path: str, location: str):
 
 
 # -----------------------------------------
-# SEARCH
+# WEB SEARCH
 # ----------------------------------------
 @tool
 def get_weather(location: str):
@@ -217,6 +217,9 @@ def web_search(query: str):
         return fetch.json()
 
 
+# --------------
+# System tools
+# ------------
 @tool
 def open_application(app_name: str):
     """Use tool to open a application for eg : if users tells to open notepad give args notepad.exe"""
@@ -224,6 +227,9 @@ def open_application(app_name: str):
     return f"Opened {app_name}"
 
 
+# ----------------
+# github tools
+# ----------------
 @tool
 def github_user(username: str):
     """Get detailed public information about a GitHub user. Use when the user asks about a GitHub username, profile, account, followers, following, public repositories, bio, location, company, website, or account statistics."""
@@ -358,7 +364,26 @@ def get_issue_comments(repo_name: str, issue: int):
             "-" * 50,
         }
 
+@tool
+def github_issues(owner: str, repo: str):
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues"
+    res = requests.get(url)
+    a = res.json()
+    issues = []
+    for item in a:
+        issues.append(
+            {
+                "Issue_no.": item["number"],
+                "url": item["url"],
+                "title": item["title"],
+                "state": item["state"],
+            }
+        )
+    return issues
 
+# ----------------
+# other tools
+# ----------------
 @tool
 def advice():
     """Return an advice if the user asks for it"""
