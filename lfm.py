@@ -1,21 +1,26 @@
 import re
 import inspect
-import torch
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from llama_cpp import Llama
 
 
-MODEL_NAME = "LiquidAI/LFM2.5-1.2B-Instruct"
+# --- Model config ---
+REPO_ID = "LiquidAI/LFM2.5-1.2B-Instruct-GGUF"
+# Pick a quant: Q4_K_M (~731MB, fastest/smallest), Q5_K_M, Q6_K, Q8_0 (best quality)
+FILENAME = "*Q4_K_M.gguf"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    torch_dtype=torch.float32,
-    device_map="cpu",
+# --- Automatic download + cache ---
+# First run downloads via huggingface_hub and caches to ~/.cache/huggingface.
+# Every subsequent run loads instantly from disk (mmap'd, no re-download).
+llm = Llama.from_pretrained(
+    repo_id=REPO_ID,
+    filename=FILENAME,
+    n_ctx=4096,
+    n_threads=None,       # None = auto-detect all cores
+    n_gpu_layers=0,       # bump this up if you have a GPU build of llama-cpp-python
+    flash_attn=True,      # required for LFM2's hybrid attention/conv layers
+    verbose=False,
 )
-
-model.eval()
 
 TOOLS = {}
 
@@ -48,9 +53,7 @@ def get_tool_definitions():
             else:
                 param_type = "string"
 
-            properties[param_name] = {
-                "type": param_type
-            }
+            properties[param_name] = {"type": param_type}
 
             if param.default is inspect.Parameter.empty:
                 required.append(param_name)
@@ -71,56 +74,53 @@ def get_tool_definitions():
     return definitions
 
 
-def generate(messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
+def generate_stream(messages, on_token=None):
+    """
+    Streams tokens via llama.cpp's native streaming and returns the full
+    decoded assistant text at the end. `tools` are passed so the model's
+    own chat template (embedded in the GGUF) renders them into the prompt.
+    """
+    stream = llm.create_chat_completion(
+        messages=messages,
         tools=get_tool_definitions(),
+        max_tokens=1080,
+        temperature=0.0,   # deterministic, matches do_sample=False
+        stream=True,
     )
 
-    inputs = tokenizer(
-        prompt,
-        return_tensors="pt"
-    )
+    full_text = ""
 
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=256,
-            do_sample=False,
-        )
+    for chunk in stream:
+        delta = chunk["choices"][0]["delta"]
+        piece = delta.get("content")
 
-    generated_tokens = output[0][inputs["input_ids"].shape[1]:]
+        if piece:
+            full_text += piece
+            if on_token:
+                on_token(piece)
 
-    return tokenizer.decode(
-        generated_tokens,
-        skip_special_tokens=False
-    )
+    return full_text
 
 
 def parse_tool_calls(text):
-    pattern = (
-        r"<\|tool_call_start\|>"
-        r"(.*?)"
-        r"<\|tool_call_end\|>"
-    )
-
-    matches = re.findall(
-        pattern,
-        text,
-        flags=re.DOTALL
-    )
-
     calls = []
 
-    for block in matches:
+    # Format 1: <|tool_call_start|>...<|tool_call_end|>
+    tagged_pattern = r"<\|tool_call_start\|>(.*?)<\|tool_call_end\|>"
+    tagged_matches = re.findall(tagged_pattern, text, flags=re.DOTALL)
+
+    # Format 2: bare [func(args)] blocks (llama.cpp's rendering for this model)
+    bare_pattern = r"\[([a-zA-Z_][a-zA-Z0-9_]*\([^\]]*\))\]"
+    bare_matches = re.findall(bare_pattern, text, flags=re.DOTALL)
+
+    blocks = tagged_matches + bare_matches
+
+    for block in blocks:
         block = block.strip()
         block = block.strip("[]").strip()
 
         match = re.match(
-            r"([a-zA-Z_][a-zA-Z0-9_]*)\s*"
-            r"\((.*)\)",
+            r"([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)",
             block,
             flags=re.DOTALL
         )
@@ -141,7 +141,6 @@ def parse_tool_calls(text):
 
             for arg in arg_pattern.finditer(arguments_text):
                 key = arg.group(1)
-
                 value = (
                     arg.group(2)
                     if arg.group(2) is not None
@@ -149,13 +148,9 @@ def parse_tool_calls(text):
                     if arg.group(3) is not None
                     else arg.group(4)
                 )
-
                 arguments[key] = value
 
-        calls.append({
-            "name": function_name,
-            "arguments": arguments,
-        })
+        calls.append({"name": function_name, "arguments": arguments})
 
     return calls
 
@@ -173,7 +168,11 @@ def execute_tool(call):
         return f"Tool error: {e}"
 
 
-def run_agent(user_input):
+def run_agent(user_input, on_token=None):
+    """
+    on_token: optional callback(str) invoked per streamed chunk,
+    e.g. `lambda t: print(t, end="", flush=True)`.
+    """
     messages = [
         {
             "role": "system",
@@ -191,10 +190,9 @@ def run_agent(user_input):
     ]
 
     while True:
-        response = generate(messages)
-
         print("\nMODEL:")
-        print(response)
+        response = generate_stream(messages, on_token=on_token)
+        print()
 
         tool_calls = parse_tool_calls(response)
 
@@ -207,15 +205,8 @@ def run_agent(user_input):
         })
 
         for call in tool_calls:
-            print(
-                f"\nCALLING: {call['name']}"
-                f"({call['arguments']})"
-            )
-
+            print(f"\nCALLING: {call['name']}({call['arguments']})")
             result = execute_tool(call)
-
-            print("RESULT:", result)
-
             messages.append({
                 "role": "tool",
                 "name": call["name"],
