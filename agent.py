@@ -1,10 +1,12 @@
 from lfm import tool, run_agent
+from rich.console import Console
 import requests
 from urllib.parse import quote
 import shutil
 import os
 from dotenv import load_dotenv
 try:
+    console=Console()
     load_dotenv()
     # -----------------------------------------
     # FILE OPERATIONS
@@ -188,6 +190,52 @@ try:
 
     @tool
     def web_search(query: str):
+        """
+        Search the live internet for information that is not available in the model's
+        own knowledge.
+
+        USE THIS TOOL WHEN:
+        - The user asks to search, look up, find, or browse something on the web.
+        - The user asks about a website, service, company, project, Discord server,
+        GitHub repository, news, documentation, or other online resource.
+        - The user asks for current or recently updated information.
+        - The user gives a topic and wants internet search results.
+        - The user says things like:
+            "search for Discord"
+            "find Discord"
+            "look up Discord"
+            "search GitHub for..."
+            "find the official website of..."
+            "what is the latest..."
+            "look up the documentation for..."
+        - When the request requires visiting/searching an actual webpage.
+
+    DO NOT USE THIS TOOL WHEN:
+        - The user is asking you to calculate something.
+        - The user is asking about files on the local computer.
+        - The answer can be produced entirely from the conversation without web access.
+        - The user is asking you to execute one of the other available tools.
+
+    IMPORTANT:
+        - Treat the user's words after "search for", "look up", "find", or "search"
+            as the search query.
+        - Keep the query concise and focused on what the user wants to find.
+        - For example:
+            User: "search for Discord"
+            -> query = "Discord"
+
+            User: "search for the official Discord website"
+            -> query = "official Discord website"
+
+            User: "find the latest Qwen 3.5 model"
+            -> query = "latest Qwen 3.5 model"
+
+            User: "look up J-bot on GitHub"
+            -> query = "J-bot GitHub"
+
+        - Return the web search/fetch result to the user. Do not claim that you
+        searched the web unless this tool was actually called.
+        """
         api_key = os.getenv("tinyfish_key")
         if not api_key:
             print("| API KEY NOT FOUND |")
@@ -400,10 +448,27 @@ try:
     with open("jarvis.txt", encoding="utf-8") as f:
         print(f.read())
         while True:
-            user_input = input("What do you want to do?: ")
-            if user_input == "./exit" or user_input == "./quit":
+            user_input = console.input("[bold cyan]What do you want to do?: ")
+            if user_input == "/exit" or user_input == "/quit":
+                console.print("\n[red bold]quitting...")
                 break
+            elif user_input=="/tool" or user_input=="/t":
+                console.print("""
+                    [green bold][   Available tools  ][/green bold]
+                    [red]
+                    󠁯•󠁏󠁏 Create file | (requires Exact file path)
+                    󠁯•󠁏󠁏 Read file | (requires Exact file path)
+                    󠁯•󠁏󠁏 Open the file in the default app | (requires Exact file path)
+                    󠁯•󠁏󠁏 Move file | (requires Exact file path)
+                    󠁯•󠁏󠁏 Remove file | (requires Exact file path)
+                    󠁯•󠁏󠁏 Copy file | (requires Exact file path)
+                    󠁯•󠁏󠁏 Weather for a location | (give name of state)
+                    󠁯•󠁏󠁏 Web search | (requires tinyfish api key)
+                    󠁯•󠁏󠁏 Open application (requires app name with .exe)
+                    󠁯•󠁏󠁏 Github tools (get info about repo , user , search etc)
+                    󠁯•󠁏󠁏 Advice (Gives harmless advices)
+                    """)
             else:
                 run_agent(user_input, on_token=lambda t: print(t, end="", flush=True))
 except KeyboardInterrupt:
-    print("Process exited")
+    console.print("\n[red bold]quitting...")

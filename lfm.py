@@ -1,214 +1,525 @@
-import re
-import inspect
+try:
+    import re
+    import inspect
+    import ast
+    import threading
+    import warnings
+    from llama_cpp import Llama
+    from rich.console import Console
+    from rich.live import Live
+    from rich.spinner import Spinner
+    from rich.text import Text
+    # Ignore the specific huggingface_hub deprecation warning
+    warnings.filterwarnings("ignore", category=UserWarning, message=".*local_dir_use_symlinks.*")
+    # ============================================================
+    # CONSOLE
+    # ============================================================
 
-from llama_cpp import Llama
-
-
-# --- Model config ---
-REPO_ID = "LiquidAI/LFM2.5-1.2B-Instruct-GGUF"
-# Pick a quant: Q4_K_M (~731MB, fastest/smallest), Q5_K_M, Q6_K, Q8_0 (best quality)
-FILENAME = "*Q4_K_M.gguf"
-
-# --- Automatic download + cache ---
-# First run downloads via huggingface_hub and caches to ~/.cache/huggingface.
-# Every subsequent run loads instantly from disk (mmap'd, no re-download).
-llm = Llama.from_pretrained(
-    repo_id=REPO_ID,
-    filename=FILENAME,
-    n_ctx=4096,
-    n_threads=None,       # None = auto-detect all cores
-    n_gpu_layers=0,       # bump this up if you have a GPU build of llama-cpp-python
-    flash_attn=True,      # required for LFM2's hybrid attention/conv layers
-    verbose=False,
-)
-
-TOOLS = {}
+    console = Console()
 
 
-def tool(func):
-    TOOLS[func.__name__] = func
-    return func
+    # ============================================================
+    # MODEL
+    # ============================================================
 
+    REPO_ID = "LiquidAI/LFM2.5-1.2B-Instruct-GGUF"
+    FILENAME = "*Q4_K_M.gguf"
 
-def get_tool_definitions():
-    definitions = []
-
-    for name, func in TOOLS.items():
-        sig = inspect.signature(func)
-
-        properties = {}
-        required = []
-
-        for param_name, param in sig.parameters.items():
-            annotation = param.annotation
-
-            if annotation == str:
-                param_type = "string"
-            elif annotation == int:
-                param_type = "integer"
-            elif annotation == float:
-                param_type = "number"
-            elif annotation == bool:
-                param_type = "boolean"
-            else:
-                param_type = "string"
-
-            properties[param_name] = {"type": param_type}
-
-            if param.default is inspect.Parameter.empty:
-                required.append(param_name)
-
-        definitions.append({
-            "type": "function",
-            "function": {
-                "name": name,
-                "description": inspect.getdoc(func) or "",
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required,
-                }
-            }
-        })
-
-    return definitions
-
-
-def generate_stream(messages, on_token=None):
-    """
-    Streams tokens via llama.cpp's native streaming and returns the full
-    decoded assistant text at the end. `tools` are passed so the model's
-    own chat template (embedded in the GGUF) renders them into the prompt.
-    """
-    stream = llm.create_chat_completion(
-        messages=messages,
-        tools=get_tool_definitions(),
-        max_tokens=1080,
-        temperature=0.0,   # deterministic, matches do_sample=False
-        stream=True,
+    llm = Llama.from_pretrained(
+        repo_id=REPO_ID,
+        filename=FILENAME,
+        n_ctx=4096,
+        n_threads=None,
+        n_gpu_layers=0,
+        flash_attn=True,
+        verbose=False,
     )
 
-    full_text = ""
 
-    for chunk in stream:
-        delta = chunk["choices"][0]["delta"]
-        piece = delta.get("content")
+    # ============================================================
+    # TOOLS
+    # ============================================================
 
-        if piece:
-            full_text += piece
-            if on_token:
-                on_token(piece)
-
-    return full_text
+    TOOLS = {}
 
 
-def parse_tool_calls(text):
-    calls = []
+    def tool(func):
+        TOOLS[func.__name__] = func
+        return func
 
-    # Format 1: <|tool_call_start|>...<|tool_call_end|>
-    tagged_pattern = r"<\|tool_call_start\|>(.*?)<\|tool_call_end\|>"
-    tagged_matches = re.findall(tagged_pattern, text, flags=re.DOTALL)
 
-    # Format 2: bare [func(args)] blocks (llama.cpp's rendering for this model)
-    bare_pattern = r"\[([a-zA-Z_][a-zA-Z0-9_]*\([^\]]*\))\]"
-    bare_matches = re.findall(bare_pattern, text, flags=re.DOTALL)
+    def get_tool_definitions():
 
-    blocks = tagged_matches + bare_matches
+        definitions = []
 
-    for block in blocks:
-        block = block.strip()
-        block = block.strip("[]").strip()
+        for name, func in TOOLS.items():
 
-        match = re.match(
-            r"([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)",
-            block,
-            flags=re.DOTALL
+            signature = inspect.signature(func)
+
+            properties = {}
+            required = []
+
+            for param_name, param in signature.parameters.items():
+
+                annotation = param.annotation
+
+                if annotation == str:
+                    param_type = "string"
+
+                elif annotation == int:
+                    param_type = "integer"
+
+                elif annotation == float:
+                    param_type = "number"
+
+                elif annotation == bool:
+                    param_type = "boolean"
+
+                else:
+                    param_type = "string"
+
+                properties[param_name] = {
+                    "type": param_type
+                }
+
+                if param.default is inspect.Parameter.empty:
+                    required.append(param_name)
+
+            definitions.append({
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": func.__doc__ or "",
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                    },
+                },
+            })
+
+        return definitions
+
+
+    # ============================================================
+    # GENERATE STREAM
+    # ============================================================
+
+    def generate_stream(messages, on_token=None):
+
+        stream = llm.create_chat_completion(
+            messages=messages,
+            tools=get_tool_definitions(),
+            max_tokens=1080,
+            temperature=0.0,
+            stream=True,
         )
 
-        if not match:
-            continue
+        statuses = [
+            "Generating...",
+            "Tinkering...",
+            "Thinking...",
+            "Working...",
+            "Figuring things out...",
+        ]
 
-        function_name = match.group(1)
-        arguments_text = match.group(2).strip()
+        stop_status = threading.Event()
+        live = None
+        status_thread = None
 
-        arguments = {}
+        full_text = ""
+        first_token = True
 
-        if arguments_text:
-            arg_pattern = re.compile(
-                r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*'
-                r'(?:"([^"]*)"|\'([^\']*)\'|([^,\s]+))'
+        # --------------------------------------------------------
+        # Status animation thread
+        # --------------------------------------------------------
+
+        def update_status():
+
+            index = 0
+
+            while not stop_status.is_set():
+
+                live.update(
+                    Spinner(
+                        "dots",
+                        text=Text(
+                            statuses[index]
+                        )
+                    )
+                )
+
+                index = (index + 1) % len(statuses)
+
+                # Change text every 5 seconds
+                # but stop immediately when generation finishes.
+                if stop_status.wait(5):
+                    break
+
+        # --------------------------------------------------------
+        # Start Rich Live
+        # --------------------------------------------------------
+
+        live = Live(
+            refresh_per_second=10,
+            console=console,
+        )
+
+        live.start()
+
+        status_thread = threading.Thread(
+            target=update_status,
+            daemon=True,
+        )
+
+        status_thread.start()
+
+        try:
+
+            for chunk in stream:
+
+                choices = chunk.get("choices", [])
+
+                if not choices:
+                    continue
+
+                delta = choices[0].get(
+                    "delta",
+                    {}
+                )
+
+                piece = delta.get("content")
+
+                if not piece:
+                    continue
+
+                # ------------------------------------------------
+                # First token arrived
+                # ------------------------------------------------
+
+                if first_token:
+
+                    first_token = False
+
+                    # Stop status animation
+                    stop_status.set()
+
+                    if status_thread:
+                        status_thread.join(
+                            timeout=1
+                        )
+
+                    # Remove Live display
+                    live.update("")
+                    live.stop()
+                    live = None
+
+                    console.print(
+                        "\n[bold green]MODEL:[/]"
+                    )
+
+                # ------------------------------------------------
+                # Save token
+                # ------------------------------------------------
+
+                full_text += piece
+
+                # ------------------------------------------------
+                # Send token to caller
+                # ------------------------------------------------
+
+                if on_token:
+                    on_token(piece)
+
+        finally:
+
+            stop_status.set()
+
+            if status_thread:
+                status_thread.join(
+                    timeout=1
+                )
+
+            if live is not None:
+                live.update("")
+                live.stop()
+
+        return full_text
+
+
+    # ============================================================
+    # TOOL CALL PARSER
+    # ============================================================
+
+    def parse_tool_calls(text):
+
+        calls = []
+
+        # --------------------------------------------------------
+        # Tagged format
+        #
+        # <|tool_call_start|>
+        # hello(name="Hi")
+        # <|tool_call_end|>
+        # --------------------------------------------------------
+
+        tagged_pattern = re.compile(
+            r"<\|tool_call_start\|>\s*(.*?)\s*<\|tool_call_end\|>",
+            re.DOTALL,
+        )
+
+        tagged_matches = tagged_pattern.findall(text)
+
+        if tagged_matches:
+
+            for match in tagged_matches:
+
+                match = match.strip()
+
+                function_match = re.match(
+                    r"([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)",
+                    match,
+                    re.DOTALL,
+                )
+
+                if not function_match:
+                    continue
+
+                name = function_match.group(1)
+
+                arguments = function_match.group(2).strip()
+
+                calls.append({
+                    "name": name,
+                    "arguments": arguments,
+                })
+
+            return calls
+
+        # --------------------------------------------------------
+        # Bare bracket format
+        #
+        # [hello(name="Hi")]
+        #
+        # IMPORTANT:
+        # We only parse the bracketed form here.
+        # We DON'T separately search for hello(...)
+        # because that caused duplicate calls.
+        # --------------------------------------------------------
+
+        bare_pattern = re.compile(
+            r"\[\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*?)\)\s*\]",
+            re.DOTALL,
+        )
+
+        bare_matches = bare_pattern.findall(text)
+
+        for name, arguments in bare_matches:
+
+            calls.append({
+                "name": name,
+                "arguments": arguments.strip(),
+            })
+
+        return calls
+
+
+    # ============================================================
+    # EXECUTE TOOL
+    # ============================================================
+
+    def execute_tool(name, arguments):
+
+        if name not in TOOLS:
+
+            return (
+                f"Tool '{name}' does not exist."
             )
 
-            for arg in arg_pattern.finditer(arguments_text):
-                key = arg.group(1)
-                value = (
-                    arg.group(2)
-                    if arg.group(2) is not None
-                    else arg.group(3)
-                    if arg.group(3) is not None
-                    else arg.group(4)
+        func = TOOLS[name]
+
+        try:
+
+            arguments = arguments.strip()
+
+            # ----------------------------------------------------
+            # No arguments
+            # ----------------------------------------------------
+
+            if not arguments:
+
+                result = func()
+
+                return str(result)
+
+            # ----------------------------------------------------
+            # Turn:
+            #
+            # name="Hi there!"
+            #
+            # into a real Python call:
+            #
+            # func(name="Hi there!")
+            # ----------------------------------------------------
+
+            expression = ast.parse(
+                f"func({arguments})",
+                mode="eval",
+            )
+
+            call = expression.body
+
+            positional_args = []
+            keyword_args = {}
+
+            # ----------------------------------------------------
+            # Positional arguments
+            # ----------------------------------------------------
+
+            for arg in call.args:
+
+                positional_args.append(
+                    ast.literal_eval(arg)
                 )
-                arguments[key] = value
 
-        calls.append({"name": function_name, "arguments": arguments})
+            # ----------------------------------------------------
+            # Keyword arguments
+            # ----------------------------------------------------
 
-    return calls
+            for keyword in call.keywords:
+
+                if keyword.arg is None:
+
+                    return (
+                        "Tool error: **kwargs style "
+                        "arguments are not supported."
+                    )
+
+                keyword_args[
+                    keyword.arg
+                ] = ast.literal_eval(
+                    keyword.value
+                )
+
+            # ----------------------------------------------------
+            # Execute
+            # ----------------------------------------------------
+
+            result = func(
+                *positional_args,
+                **keyword_args,
+            )
+
+            return str(result)
+
+        except Exception as e:
+
+            return (
+                f"Tool execution error: "
+                f"{type(e).__name__}: {e}"
+            )
 
 
-def execute_tool(call):
-    name = call["name"]
-    arguments = call["arguments"]
+    # ============================================================
+    # AGENT
+    # ============================================================
 
-    if name not in TOOLS:
-        return f"Error: unknown tool '{name}'"
+    def run_agent(
+        user_input,
+        on_token=None,
+    ):
 
-    try:
-        return str(TOOLS[name](**arguments))
-    except Exception as e:
-        return f"Tool error: {e}"
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful AI assistant. "
+                    "Use tools when necessary."
+                ),
+            },
+            {
+                "role": "user",
+                "content": user_input,
+            },
+        ]
 
+        while True:
 
-def run_agent(user_input, on_token=None):
-    """
-    on_token: optional callback(str) invoked per streamed chunk,
-    e.g. `lambda t: print(t, end="", flush=True)`.
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a helpful AI agent. "
-                "Use tools when necessary. "
-                "After receiving tool results, continue reasoning "
-                "and provide the final answer."
-            ),
-        },
-        {
-            "role": "user",
-            "content": user_input,
-        }
-    ]
+            # ----------------------------------------------------
+            # Generate
+            # ----------------------------------------------------
 
-    while True:
-        print("\nMODEL:")
-        response = generate_stream(messages, on_token=on_token)
-        print()
+            response_text = generate_stream(
+                messages,
+                on_token=on_token,
+            )
 
-        tool_calls = parse_tool_calls(response)
+            # ----------------------------------------------------
+            # Check tool calls
+            # ----------------------------------------------------
 
-        if not tool_calls:
-            return response
+            tool_calls = parse_tool_calls(
+                response_text
+            )
 
-        messages.append({
-            "role": "assistant",
-            "content": response,
-        })
+            # ----------------------------------------------------
+            # Normal response
+            # ----------------------------------------------------
 
-        for call in tool_calls:
-            print(f"\nCALLING: {call['name']}({call['arguments']})")
-            result = execute_tool(call)
+            if not tool_calls:
+
+                console.print()
+
+                return response_text
+
+            # ----------------------------------------------------
+            # Save assistant message
+            # ----------------------------------------------------
+
             messages.append({
-                "role": "tool",
-                "name": call["name"],
-                "content": result,
+                "role": "assistant",
+                "content": response_text,
             })
+
+            # ----------------------------------------------------
+            # Execute tools
+            # ----------------------------------------------------
+
+            for call in tool_calls:
+
+                name = call["name"]
+
+                arguments = call["arguments"]
+
+                console.print(
+                    f"\n[bold yellow]CALLING[/] "
+                    f"[cyan]{name}[/]"
+                )
+
+                console.print(
+                    f"[dim]{arguments}[/]"
+                )
+
+                result = execute_tool(
+                    name,
+                    arguments,
+                )
+
+                console.print(
+                    "[bold blue]TOOL RESULT:[/]"
+                )
+
+                console.print(
+                    result
+                )
+
+                # ------------------------------------------------
+                # Add result back to model
+                # ------------------------------------------------
+
+                messages.append({
+                    "role": "tool",
+                    "content": result,
+                })
+except ValueError:
+    print("\nContext Limit reached.")

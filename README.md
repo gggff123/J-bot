@@ -77,11 +77,7 @@ New capabilities can be added without rebuilding the entire assistant.
 
 ### 🔎 Information Retrieval
 
-J-bot can retrieve information from external sources such as Wikipedia.
-
-### 📝 Summarization
-
-Retrieved information can be processed and summarized before being presented to the user.
+J-bot can retrieve information from external sources such as Google.
 
 ### 🧩 Extensible
 
@@ -95,8 +91,7 @@ The goal is to make adding a new capability as simple as creating another tool.
 | :-------------------- | :----: |
 | 🌐 Web Search         |   ✅   |
 | 🌦️ Weather            |   ✅   |
-| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" height="20"> GitHub | 🟡 |
-| 🧮 Calculator         |   🚧   |
+| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" height="20"> GitHub | ✅ |
 | 📁 File Operations    |   ✅   |
 | 💻 System Information |   🚧   |
 | ⏰ Automation          |   🚧   |
@@ -143,7 +138,7 @@ This makes the assistant much more than a simple chatbot.
 
 * Python 3.x
 * Git
-* An AI model/API supported by your configuration
+* An AI model/API (coming soon..) supported by your configuration
 
 ### Clone
 
@@ -190,11 +185,11 @@ User
   ▼
 J-bot 🧠
   │
-  │  Wikipedia Search
+  │  Search
   ▼
-Wikipedia 🔎
+ google 🔎
   │
-  │  Article information
+  │  information
   ▼
 J-bot 🧠
   │
@@ -214,7 +209,7 @@ J-bot
 ├── 🧠 Agent
 │
 ├── 🔧 Tools
-│   ├── Wikipedia
+│   ├── Weather
 │   ├── Web Search
 │   └── ...
 │
@@ -230,10 +225,10 @@ The architecture is intentionally evolving as new capabilities are added.
 
 * [x] Web search
 * [x] Weather
-* [ ] Calculator
 * [x] File management
 * [ ] System information
 * [ ] More APIs
+* [x] Github tools
 
 ### Future
 
@@ -241,7 +236,7 @@ The architecture is intentionally evolving as new capabilities are added.
 * [ ] Long-running tasks
 * [ ] Scheduled tasks
 * [ ] Voice interaction
-* [ ] Better UI
+* [x] Better UI
 * [ ] Plugin system
 * [ ] Autonomous workflows
 
