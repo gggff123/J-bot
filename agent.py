@@ -5,9 +5,11 @@ from urllib.parse import quote
 import shutil
 import os
 from dotenv import load_dotenv
+
 try:
-    console=Console()
+    console = Console()
     load_dotenv()
+
     # -----------------------------------------
     # FILE OPERATIONS
     # ----------------------------------------
@@ -57,7 +59,7 @@ try:
             print(f"WARNING | WILL OVERWRITE YOUR EXISTING FILE {file_name} |")
             confirm = input("Confirm (y/n) : ")
             if confirm == "y" or confirm == "Y":
-                with open(file_name, "w") as f:
+                with open(file_name, "w", encoding="utf-8") as f:
                     f.write(value)
                 return {"Output": f"Created a file {file_name}"}
             else:
@@ -67,19 +69,19 @@ try:
                 f.write(value)
             return {"Output": f"Created a file {file_name}"}
 
-
     @tool
     def read_file(file: str):
         """
         Read and return the contents of an existing text file.
 
-        file MUST be the actual filename/path.
+        file MUST be the actual filename.
         Example: read_file("app.txt")
 
         Do not use a description such as "the file" or "weather file"
         unless that is literally the filename.
         """
-        with open(file, "r") as f:
+        file_path = os.path.abspath(file)
+        with open(file_path, "r", encoding="utf-8") as f:
             for line in f:
                 print(line.strip())
         return "Read !"
@@ -89,19 +91,19 @@ try:
         """
         Open an existing file using the operating system's default application.
 
-        file MUST be the actual filename/path.
+        file MUST be the actual filename.
         Example: open_file("app.txt")
 
         Do not use this tool to read or modify file contents.
         """
         import os
 
-        os.startfile(file)
+        file_path = os.path.abspath(file)
+        os.startfile(file_path)
         return f"Opened your file: {file}"
 
-
     @tool
-    def move_file(orignal_path: str, location: str):
+    def move_file(original_path: str, location: str):
         """
         Move an existing file.
 
@@ -111,166 +113,186 @@ try:
         Example:
         move_file("app.txt", "C:/Users/User/Documents/app.txt")
         """
-        shutil.move(orignal_path, location)
-        return f"Moved {orignal_path} to {location}."
-
+        shutil.move(original_path, location)
+        return f"Moved {original_path} to {location}."
 
     @tool
-    def remove_file(file_path: str):
+    def remove_file(file: str):
         """
         Permanently delete an existing file.
 
-        file_path MUST be the actual file path.
+        file MUST be the actual file path.
         Never delete a file unless the user's request clearly asks for deletion.
         """
+        file_path = os.path.abspath(file)
         confirm = input(f"WARNING | DELETING FILE : {file_path} (y/n): ")
         if confirm == "y" or confirm == "Y":
             os.remove(file_path)
-            return f"Removed file from path {file_path}"
+            return f"Removed file {file} from path {file_path}"
         else:
-            return f"No selected so exiting.."
-
+            return "No selected so exiting.."
 
     @tool
-    def copy_file(path: str, location: str):
+    def copy_file(file: str, location: str):
         """
         Copy an existing file.
 
-        path = actual source file path.
+        file = actual source file name
         location = actual destination path or directory.
 
         Example:
         copy_file("app.txt", "backup/app.txt")
         """
+        path = os.path.abspath(file)
         shutil.copy2(path, location)
         return f"File copied from path {path} to {location}"
-
 
     # -----------------------------------------
     # WEB SEARCH
     # ----------------------------------------
     @tool
     def get_weather(location: str):
-        """
-        Get the current weather for a location.
+        """Get the current weather for a location."""
+        try:
+            geo = requests.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={
+                    "name": location,
+                    "count": 1,
+                    "language": "en",
+                    "format": "json",
+                },
+                timeout=10,
+            )
 
-        Args:
-            location: The actual place name requested by the user.
+            geo.raise_for_status()
+            data = geo.json()
 
-        IMPORTANT:
-            Return the weather information as the tool result.
+            if not data.get("results"):
+                return f"Could not find the location: {location}"
 
-            If another tool needs this information, that tool MUST receive
-            the actual result returned by get_weather.
+            place = data["results"][0]
 
-        Example:
+            latitude = place["latitude"]
+            longitude = place["longitude"]
 
-            get_weather("Kolkata")
+            weather = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
+                    "timezone": "auto",
+                },
+                timeout=10,
+            )
 
-            returns:
-            "It's 31°C in Kolkata right now"
+            weather.raise_for_status()
+            current = weather.json()["current"]
 
-            The next tool should receive exactly:
-            "It's 31°C in Kolkata right now"
-        """
-        url = f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
-        result = requests.get(url)
-        a = result.json()
-        latitude = a["results"][0]["latitude"]
-        longitude = a["results"][0]["longitude"]
-        url_weather = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m"
-        weather = requests.get(url_weather)
-        b = weather.json()
-        temp = b["current"]["temperature_2m"]
-        wind = b["current"]["wind_speed_10m"]
-        return (
-            f"its {temp}°C in {location} right now , with a wind speed of about {wind}km/h"
-        )
+            return {
+                "location": f"{place['name']}, {place.get('country', '')}",
+                "temperature": current["temperature_2m"],
+                "feels_like": current["apparent_temperature"],
+                "humidity": current["relative_humidity_2m"],
+                "wind_speed": current["wind_speed_10m"],
+                "weather_code": current["weather_code"],
+                "unit": "°C",
+            }
 
+        except requests.Timeout:
+            return "Weather request timed out."
+
+        except requests.RequestException as e:
+            return f"Weather API error: {e}"
+
+        except Exception as e:
+            return f"Weather error: {e}"
 
     @tool
     def web_search(query: str):
-        """
-        Search the live internet for information that is not available in the model's
-        own knowledge.
+        """Search the web and fetch the most relevant result."""
+        try:
+            api_key = os.getenv("TINYFISH_API_KEY")
 
-        USE THIS TOOL WHEN:
-        - The user asks to search, look up, find, or browse something on the web.
-        - The user asks about a website, service, company, project, Discord server,
-        GitHub repository, news, documentation, or other online resource.
-        - The user asks for current or recently updated information.
-        - The user gives a topic and wants internet search results.
-        - The user says things like:
-            "search for Discord"
-            "find Discord"
-            "look up Discord"
-            "search GitHub for..."
-            "find the official website of..."
-            "what is the latest..."
-            "look up the documentation for..."
-        - When the request requires visiting/searching an actual webpage.
+            if not api_key:
+                api_key = console.input(
+                    "[bold yellow]Enter your TinyFish API key: [/bold yellow]"
+                ).strip()
 
-    DO NOT USE THIS TOOL WHEN:
-        - The user is asking you to calculate something.
-        - The user is asking about files on the local computer.
-        - The answer can be produced entirely from the conversation without web access.
-        - The user is asking you to execute one of the other available tools.
+                if not api_key:
+                    return "No TinyFish API key provided."
 
-    IMPORTANT:
-        - Treat the user's words after "search for", "look up", "find", or "search"
-            as the search query.
-        - Keep the query concise and focused on what the user wants to find.
-        - For example:
-            User: "search for Discord"
-            -> query = "Discord"
+                with open(".env", "a", encoding="utf-8") as f:
+                    f.write(f"\nTINYFISH_API_KEY={api_key}\n")
 
-            User: "search for the official Discord website"
-            -> query = "official Discord website"
+                os.environ["TINYFISH_API_KEY"] = api_key
 
-            User: "find the latest Qwen 3.5 model"
-            -> query = "latest Qwen 3.5 model"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Accept": "application/json",
+            }
 
-            User: "look up J-bot on GitHub"
-            -> query = "J-bot GitHub"
-
-        - Return the web search/fetch result to the user. Do not claim that you
-        searched the web unless this tool was actually called.
-        """
-        api_key = os.getenv("tinyfish_key")
-        if not api_key:
-            print("| API KEY NOT FOUND |")
-            confirm = input("Continue (y/n) : ")
-            if confirm == "y" or confirm == "Y":
-                print("Yes option selected")
-                input_api_key = input(
-                    "Enter your tinyfish api key for web search (https://agent.tinyfish.ai/): "
-                )
-                with open(".env", "w") as f:
-                    f.write(f"tinyfish_key='{input_api_key}'")
-            else:
-                print("Selected No so exiting")
-                return "No api key provided"
-        else:
-            url = "https://agent.tinyfish.ai/v1/search"
-            headers = {"X-API-Key": api_key}
-            response_url = requests.get(url, headers=headers, params={"query": query})
-            url_generated = response_url.json()
-            url = url_generated["results"][0]["url"]
-            fetch = requests.post(
-                "https://agent.tinyfish.ai/v1/fetch", headers=headers, json={"urls": [url]}
+            search_response = requests.get(
+                "https://api.tinyfish.ai/v1/search",
+                params={"query": query},
+                headers=headers,
+                timeout=20,
             )
-            return fetch.json()
 
+            search_response.raise_for_status()
+            search_data = search_response.json()
+
+            results = search_data.get("results", [])
+
+            if not results:
+                return f"No search results found for: {query}"
+
+            first_result = results[0]
+
+            url = first_result.get("url")
+
+            if not url:
+                return first_result
+
+            fetch_response = requests.post(
+                "https://api.tinyfish.ai/v1/fetch",
+                headers={**headers, "Content-Type": "application/json"},
+                json={"url": url},
+                timeout=30,
+            )
+
+            fetch_response.raise_for_status()
+
+            return {
+                "query": query,
+                "title": first_result.get("title"),
+                "url": url,
+                "content": fetch_response.json(),
+            }
+
+        except requests.Timeout:
+            return "Web search timed out."
+
+        except requests.HTTPError as e:
+            return f"Web search HTTP error: {e}"
+
+        except requests.RequestException as e:
+            return f"Web search request failed: {e}"
+
+        except Exception as e:
+            return f"Web search error: {e}"
 
     # --------------
     # System tools
     # ------------
     @tool
     def open_application(app_name: str):
-        """Use tool to open a application for eg : if users tells to open notepad give args notepad.exe"""
-        os.startfile(app_name)
+        """Use tool to open a application for eg : if users tells to open notepad give args notepad
+        ARGS : app_name
+        """
+        os.startfile(app_name + ".exe")
         return f"Opened {app_name}"
-
 
     # ----------------
     # github tools
@@ -307,14 +329,12 @@ try:
     def github_users_repos(username: str):
         """Get a list of repositories owned by a GitHub user. Use when the user asks what projects/repositories a user has, their repositories, or wants to inspect a user's projects."""
         url = f"https://api.github.com/users/{username}/repos"
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
         names = res.json()
         repos = [
             {"name": repo["name"], "description": repo["description"]} for repo in names
         ]
-        return {
-            "Repos":repos
-        }
+        return {"Repos": repos}
 
     @tool
     def github_search(query: str, search_type: str = "repositories"):
@@ -386,19 +406,19 @@ try:
     @tool
     def github_followers(username: str):
         url = f"https://api.github.com/users/{username}/followers"
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
         store = res.json()
         name = [names["login"] for names in store]
-        return {
-            "names":name
-        }
+        return {"names": name}
 
     @tool
     def get_issue_comments(owner: str, repo_name: str, issue: int):
 
-        url = f"https://api.github.com/repos/{owner}/{repo_name}/issues/{issue}/comments"
+        url = (
+            f"https://api.github.com/repos/{owner}/{repo_name}/issues/{issue}/comments"
+        )
 
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
 
         store = res.json()
 
@@ -408,17 +428,20 @@ try:
         comments = []
 
         for comment in store:
-            comments.append({
-                "User": comment["user"]["login"],
-                "Comment": comment["body"],
-                "URL": comment["html_url"],
-                "Separator": "-" * 50,
-            })
+            comments.append(
+                {
+                    "User": comment["user"]["login"],
+                    "Comment": comment["body"],
+                    "URL": comment["html_url"],
+                    "Separator": "-" * 50,
+                }
+            )
+        return comments
 
     @tool
     def github_issues(owner: str, repo: str):
         url = f"https://api.github.com/repos/{owner}/{repo}/issues"
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
         a = res.json()
         issues = []
         for item in a:
@@ -443,7 +466,6 @@ try:
         a = res.json()
         return {"Advice": a["slip"]["advice"]}
 
-
     # CLI Intro art
     with open("jarvis.txt", encoding="utf-8") as f:
         print(f.read())
@@ -452,7 +474,7 @@ try:
             if user_input == "/exit" or user_input == "/quit":
                 console.print("\n[red bold]quitting...")
                 break
-            elif user_input=="/tool" or user_input=="/t":
+            elif user_input == "/tool" or user_input == "/t":
                 console.print("""
                     [green bold][   Available tools  ][/green bold]
                     [red]
