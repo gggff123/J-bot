@@ -28,7 +28,7 @@ try:
     llm = Llama.from_pretrained(
         repo_id=REPO_ID,
         filename=FILENAME,
-        n_ctx=4096,
+        n_ctx=5080,
         n_threads=None,
         n_gpu_layers=0,
         flash_attn=True,
