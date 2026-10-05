@@ -93,8 +93,9 @@ The goal is to make adding a new capability as simple as creating another tool.
 | 🌦️ Weather            |   ✅   |
 | <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" height="20"> GitHub | ✅ |
 | 📁 File Operations    |   ✅   |
-| 💻 System Information |   🚧   |
+| 💻 System Information |   ✅   |
 | ⏰ Automation          |   🚧   |
+| 📡 Online AI (cloud)   |   ✅   |
 
 > More tools are being added as J-bot evolves.
 
@@ -138,7 +139,7 @@ This makes the assistant much more than a simple chatbot.
 
 * Python 3.x
 * Git
-* An AI model/API (coming soon..) supported by your configuration
+* An AI model/API (optional only if you want to use cloud AI)
 
 ### Clone
 
@@ -170,6 +171,11 @@ python agent.py
 
 ---
 
+##  Online version (you need a OpenAI compatible url , key)
+```powershell
+python ongent.py
+```
+---
 ## 💬 Example
 
 ```text
@@ -226,14 +232,14 @@ The architecture is intentionally evolving as new capabilities are added.
 * [x] Web search
 * [x] Weather
 * [x] File management
-* [ ] System information
+* [x] System information
 * [ ] More APIs
 * [x] Github tools
 
 ### Future
 
-* [ ] Memory
-* [ ] Long-running tasks
+* [x] Memory
+* [x] Online AI
 * [ ] Scheduled tasks
 * [ ] Voice interaction
 * [x] Better UI
