@@ -2,4 +2,5 @@ dotenv
 rich
 huggingface_hub
 llama-cpp-python
+openai
 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu

@@ -143,37 +143,13 @@ This makes the assistant much more than a simple chatbot.
 
 ### Clone
 
-```bash
+```cmd
 git clone https://github.com/gggff123/J-bot.git
 cd J-bot
 ```
-
-### Create a virtual environment
-
-**Windows**
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### Install dependencies
-
-```powershell
-pip install -r requirements.txt
-```
-
-### Start J-bot
-
-```powershell
-python agent.py
-```
-
----
-
-##  Online version (you need a OpenAI compatible url , key)
-```powershell
-python ongent.py
+## Start J-bot
+```cmd
+./setup.bat 
 ```
 ---
 ## 💬 Example
@@ -233,7 +209,6 @@ The architecture is intentionally evolving as new capabilities are added.
 * [x] Weather
 * [x] File management
 * [x] System information
-* [ ] More APIs
 * [x] Github tools
 
 ### Future
