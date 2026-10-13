@@ -215,11 +215,7 @@ The architecture is intentionally evolving as new capabilities are added.
 
 * [x] Memory
 * [x] Online AI
-* [ ] Scheduled tasks
-* [ ] Voice interaction
 * [x] Better UI
-* [ ] Plugin system
-* [ ] Autonomous workflows
 
 ---
 
