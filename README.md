@@ -23,7 +23,7 @@
 
 ## ⚡ What is J-bot?
 
-J-bot is an experimental **AI agent framework/assistant** designed to give language models access to tools.
+J-bot is a **AI agent framework/assistant** designed to give language models access to tools.
 
 Instead of simply generating text, J-bot can decide when it needs an external capability, call a tool, receive the result, and use that information to produce a response.
 
@@ -210,13 +210,13 @@ The architecture is intentionally evolving as new capabilities are added.
 * [x] File management
 * [x] System information
 * [x] Github tools
-
+* [x]  Github actions using users account
 ### Future
 
 * [x] Memory
 * [x] Online AI
 * [x] Better UI
-
+* [x] Github Automation
 ---
 
 ## 🧪 Development Status
