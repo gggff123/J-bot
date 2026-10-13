@@ -3,4 +3,5 @@ rich
 huggingface_hub
 llama-cpp-python
 openai
+psutil
 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu

@@ -5,7 +5,8 @@ from urllib.parse import quote
 import shutil
 import os
 from dotenv import load_dotenv
-
+import platform
+import psutil
 try:
     console = Console()
     load_dotenv()
@@ -465,7 +466,25 @@ try:
         res = requests.get(url)
         a = res.json()
         return {"Advice": a["slip"]["advice"]}
-
+    current_dir="."
+    disk_info=shutil.disk_usage(current_dir)
+    disk_available=disk_info.free / (1024**3)
+    disk_total=disk_info.total / (1024**3)
+    ram_info = psutil.virtual_memory()
+    ram_total = ram_info.total / (1024 ** 3)
+    ram_available = ram_info.available / (1024 ** 3)
+    @tool
+    def system_info():
+        return {
+            "Machine":platform.machine(),
+            "OS":platform.system(),
+            "Platform":platform.platform(),
+            "Processor":platform.processor(),
+            "Disk Space total": disk_total,
+            "Disk Space Free": disk_available,
+            "RAM total":ram_total,
+            "RAM available":ram_available,
+        }
     # CLI Intro art
     with open("jarvis.txt", encoding="utf-8") as f:
         print(f.read())

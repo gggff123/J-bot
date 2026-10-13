@@ -8,6 +8,7 @@ from dotenv import load_dotenv,set_key
 import platform
 from rich.console import Console
 from openai import OpenAI
+import psutil
 console=Console()
 # ============================================================
 # CONFIG
@@ -163,6 +164,13 @@ def execute_tool(name, arguments):
 # __________________________________________________________
 #  TOOLS
 # ----------------------------------------------------------
+current_dir="."
+disk_info=shutil.disk_usage(current_dir)
+disk_available=disk_info.free / (1024**3)
+disk_total=disk_info.total / (1024**3)
+ram_info = psutil.virtual_memory()
+ram_total = ram_info.total / (1024 ** 3)
+ram_available = ram_info.available / (1024 ** 3)
 @tool("Get system information of the device")
 def system_info():
     return {
@@ -170,6 +178,10 @@ def system_info():
         "OS":platform.system(),
         "Platform":platform.platform(),
         "Processor":platform.processor(),
+        "Disk Space total": disk_total,
+        "Disk Space Free": disk_available,
+        "RAM total":ram_total,
+        "RAM available":ram_available,
     }
 @tool("Get a random advice use this when user asks for a advice")
 def advice():
