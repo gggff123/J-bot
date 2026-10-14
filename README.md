@@ -1,300 +1,270 @@
-<div align="center">
+ <div align="center">
 
-# 🤖 J-bot
+# 🤖 J-Bot
 
-### An AI agent that can think, use tools, and get things done.
+### Your AI assistant. Your tools. Your workflow.
 
-**J-bot is an extensible Python AI assistant built around tool calling — giving an AI model the ability to interact with the real world.**
+**J-Bot is an experimental Python AI agent that connects language models to real tools — from web search and weather to file operations and GitHub.**
 
-<br>
+Move beyond a chatbot that only answers questions. Build an assistant that can retrieve information, interact with tools, inspect results, and help you get things done.
 
-[![GitHub](https://img.shields.io/github/stars/gggff123/J-bot?style=for-the-badge\&logo=github)](https://github.com/gggff123/J-bot)
-[![GitHub issues](https://img.shields.io/github/issues/gggff123/J-bot?style=for-the-badge)](https://github.com/gggff123/J-bot/issues)
-[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge\&logo=python\&logoColor=white)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/status-in%20development-orange?style=for-the-badge)]()
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Development Status](https://img.shields.io/badge/Status-Experimental-orange?style=flat-square)](https://github.com/gggff123/J-bot)
+[![GitHub Stars](https://img.shields.io/github/stars/gggff123/J-bot?style=flat-square&logo=github)](https://github.com/gggff123/J-bot/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/gggff123/J-bot?style=flat-square)](https://github.com/gggff123/J-bot/issues)
 
-<br><br>
-
-**[⭐ Star the repo](https://github.com/gggff123/J-bot) · [🐛 Report a bug](https://github.com/gggff123/J-bot/issues) · [💡 Request a feature](https://github.com/gggff123/J-bot/issues)**
+[**Get Started**](#-getting-started) · [Features](#-features) · [Architecture](#-how-it-works) · [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## ⚡ What is J-bot?
+## 💡 What is J-Bot?
 
-J-bot is a **AI agent framework/assistant** designed to give language models access to tools.
+Most basic chatbots follow a simple pattern:
 
-Instead of simply generating text, J-bot can decide when it needs an external capability, call a tool, receive the result, and use that information to produce a response.
+`User → AI model → Response`
 
-```text
-                    ┌──────────────┐
-                    │     USER     │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │   J-BOT 🧠   │
-                    │     AGENT    │
-                    └──────┬───────┘
-                           │
-                    ┌──────┴──────┐
-                    │             │
-                Need tool?     No tool
-                    │             │
-                    ▼             ▼
-             ┌────────────┐   ┌─────────┐
-             │    TOOL    │   │ RESPONSE│
-             └─────┬──────┘   └─────────┘
-                   │
-                   ▼
-              TOOL RESULT
-                   │
-                   ▼
-              ┌─────────┐
-              │ J-BOT 🧠│
-              └────┬────┘
-                   │
-                   ▼
-                RESPONSE
-```
+J-Bot is built around a more capable approach:
 
----
+`User → Agent → Tool → Result → Agent → Response`
 
-## ✨ Features
+When a task requires an external capability, the agent can use an available tool and incorporate the result into its response.
 
-### 🧠 Agentic AI
+The goal is to create a flexible, extensible assistant where tools expand what a language model can do.
 
-J-bot doesn't need every capability built directly into the model.
+### ✨ What makes it interesting?
 
-It can use tools to extend what the model is capable of doing.
+- **Tool-driven workflows:** Give an AI agent access to useful external capabilities.
+- **Python-based:** Explore, modify, and extend the implementation.
+- **Online and offline modes:** Choose a supported execution path through the setup wizard.
+- **GitHub integration:** Bring repository-related capabilities into the assistant.
+- **An evolving project:** Experiment with agent architecture, model integration, and practical automation.
 
-### 🔧 Tool Calling
+## 🚀 Features
 
-Tools are the core of J-bot.
+| Capability | What it does |
+|---|---|
+| 🧠 AI agent | Coordinates requests, tools, and results |
+| 🔎 Web search | Retrieves information from the web |
+| 🌦️ Weather | Accesses weather information |
+| 🐙 GitHub integration | Provides GitHub-related tools and account actions |
+| 📁 File operations | Works with files through available tools |
+| 💻 System information | Retrieves information about the local system |
+| 🧠 Memory | Supports assistant memory capabilities |
+| 📡 Model integration | Supports online AI and local-model workflows |
+| 🎨 Terminal interface | Uses Rich for terminal presentation |
+| 🧩 Extensible design | Provides a foundation for adding more tools |
 
-New capabilities can be added without rebuilding the entire assistant.
+> **Note:** Available functionality can depend on the selected mode, model configuration, API credentials, and the current state of development.
 
-### 🔎 Information Retrieval
+## 🖥️ See it in action
 
-J-bot can retrieve information from external sources such as Google.
+A simple example is asking J-Bot to research a topic.
 
-### 🧩 Extensible
-
-The goal is to make adding a new capability as simple as creating another tool.
-
----
-
-## 🛠️ Tools
-
-| Tool                  | Status |
-| :-------------------- | :----: |
-| 🌐 Web Search         |   ✅   |
-| 🌦️ Weather            |   ✅   |
-| <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" height="20"> GitHub | ✅ |
-| 📁 File Operations    |   ✅   |
-| 💻 System Information |   ✅   |
-| ⏰ Automation          |   🚧   |
-| 📡 Online AI (cloud)   |   ✅   |
-
-> More tools are being added as J-bot evolves.
-
----
-
-## 🎯 Why J-bot?
-
-Most simple chatbots follow:
+**You ask:**
 
 ```text
-User → Model → Response
+Search the web for information about Egypt.
+Summarize the most useful findings.
 ```
 
-J-bot aims for:
+**The intended workflow:**
 
 ```text
-User
- ↓
-Agent
- ↓
-Understand the task
- ↓
-Choose a tool
- ↓
-Execute
- ↓
-Observe result
- ↓
-Reason again
- ↓
-Respond
+       YOUR REQUEST
+            │
+            ▼
+       ┌─────────┐
+       │ J-BOT   │
+       │  AGENT  │
+       └────┬────┘
+            │
+            ▼
+      Select a tool
+            │
+            ▼
+       Web Search
+            │
+            ▼
+      Search Results
+            │
+            ▼
+       J-Bot processes
+        the results
+            │
+            ▼
+      Final response
 ```
 
-This makes the assistant much more than a simple chatbot.
+The agent's job is to connect your request with the available tools and use the returned information to formulate an answer.
 
----
+> **Want to see the real experience?** Run J-Bot locally and capture a short terminal GIF here. A genuine demonstration of a tool call, its result, and the final response is the best way to show prospective users what the project actually does.
 
-## 🚀 Quick Start
+## ⚙️ How it works
+
+J-Bot is organized around a few central responsibilities:
+
+- **Agent:** Coordinates the user's request and the tool-use workflow.
+- **Tools:** Provide capabilities such as search, weather, file operations, and GitHub integration.
+- **Model:** Supplies the language-model capabilities used by the selected execution mode.
+- **Interface:** Provides the terminal interaction.
+
+Conceptually:
+
+```text
+J-Bot
+├── Agent
+│   ├── Understand the request
+│   ├── Select available capabilities
+│   ├── Process tool results
+│   └── Produce a response
+│
+├── Tools
+│   ├── Web Search
+│   ├── Weather
+│   ├── File Operations
+│   ├── System Information
+│   └── GitHub
+│
+├── Model Integration
+│   ├── Offline mode
+│   └── Online mode
+│
+└── Terminal Interface
+```
+
+This is a conceptual overview, not a guarantee that every capability is implemented as a separate module.
+
+## 🛠️ Getting started
+
+J-Bot currently provides a Windows batch setup wizard that installs dependencies and launches the selected mode.
 
 ### Requirements
 
-* Python 3.x
-* Git
-* An AI model/API (optional only if you want to use cloud AI)
+- Windows with Command Prompt
+- Python 3.x
+- Git
+- An internet connection for cloning the repository and installing dependencies
+- An API key for online mode
+- A compatible local-model setup for offline mode
 
-### Clone
+### 1. Clone the repository
+
+Open Command Prompt and run:
 
 ```cmd
 git clone https://github.com/gggff123/J-bot.git
 cd J-bot
 ```
-## Start J-bot
+
+### 2. Run the setup wizard
+
 ```cmd
-./setup.bat 
-```
----
-## 💬 Example
-
-```text
-What do you want to do?: Search about Egypt
+setup.bat
 ```
 
-J-bot can determine that external information is required, call the appropriate search tool, retrieve the information, and return the result.
+The wizard will:
 
-```text
-User
-  │
-  │  Search about Egypt
-  ▼
-J-bot 🧠
-  │
-  │  Search
-  ▼
- google 🔎
-  │
-  │  information
-  ▼
-J-bot 🧠
-  │
-  ▼
-Response
-```
+1. Check for and install `uv` if necessary.
+2. Let you choose a virtual environment or system Python.
+3. Install the project's Python dependencies.
+4. Let you select offline or online mode.
+5. Launch the corresponding entry point.
 
----
+### 3. Choose your mode
 
-## 🧱 Architecture
+**Offline mode**
 
-J-bot is being built around a modular architecture:
+The wizard launches `agent.py`. Make sure the required local model and configuration are available before using this mode.
 
-```text
-J-bot
-│
-├── 🧠 Agent
-│
-├── 🔧 Tools
-│   ├── Weather
-│   ├── Web Search
-│   └── ...
-│
-├── ⚙️ Model
-│
-└── 🖥️ Interface
-```
+**Online mode**
 
-The architecture is intentionally evolving as new capabilities are added.
+The wizard launches `ongent.py`. Configure the required API credentials and provider settings before using this mode.
 
----
-### Tools
+The setup wizard installs dependencies, but it does not guarantee that every model, API provider, or credential is configured automatically.
 
-* [x] Web search
-* [x] Weather
-* [x] File management
-* [x] System information
-* [x] Github tools
-* [x]  Github actions using users account
-### Future
+For troubleshooting, check the terminal output and the project's current configuration before opening an issue.
 
-* [x] Memory
-* [x] Online AI
-* [x] Better UI
-* [x] Github Automation
----
+## 🔐 Security and permissions
 
-## 🧪 Development Status
+J-Bot can interact with tools that access files, system information, or GitHub.
 
-> **J-bot is currently experimental.**
+- Review tool behavior before using it with sensitive files or repositories.
+- Protect API keys and never commit secrets to the repository.
+- Use a test repository when experimenting with GitHub write operations.
+- Understand what a tool can change before granting it access to your account.
 
-This project is actively being developed and is **not production-ready**.
+An AI-generated action should not be treated as automatically safe or correct.
 
-The architecture, APIs, tools, and behavior may change significantly.
+## 🧪 Development status
 
-Expect bugs. Expect changes. Expect new features.
+J-Bot is **experimental and actively evolving**.
 
-That's part of the project.
+The APIs, architecture, model configuration, and tool behavior may change. Some workflows may require additional configuration, and bugs are possible.
 
----
+This project is intended for experimentation, learning, and development — not as a guarantee of production-ready autonomous operation.
+
+## 🗺️ Roadmap
+
+Potential areas of continued development include:
+
+- [ ] More reliable tool selection and execution
+- [ ] Clearer configuration and first-run diagnostics
+- [ ] Better error handling and recovery
+- [ ] Improved documentation and real usage demonstrations
+- [ ] Automated tests for important workflows
+- [ ] More extensible tool registration
+- [ ] Safer controls around actions that modify external systems
+
+Have an idea that would make J-Bot more useful? [Open an issue](https://github.com/gggff123/J-bot/issues).
 
 ## 🤝 Contributing
 
-Have an idea for a tool?
+Contributions, bug reports, and thoughtful feature suggestions are welcome.
 
-Found a bug?
+1. Fork the repository.
+2. Create a branch for your change.
+3. Make your changes.
+4. Test the affected functionality.
+5. Open a pull request describing what changed and how you tested it.
 
-Want to improve J-bot?
+For major features, consider opening an issue first so the approach can be discussed.
 
-Contributions are welcome.
+- [Browse open issues](https://github.com/gggff123/J-bot/issues)
+- [Request a feature](https://github.com/gggff123/J-bot/issues)
+- [Explore the source code](https://github.com/gggff123/J-bot)
 
-```text
-Fork
-  ↓
-Create a branch
-  ↓
-Make your changes
-  ↓
-Test
-  ↓
-Pull Request
-```
+## ⭐ Support the project
 
-Before submitting a large change, opening an issue to discuss it is recommended.
+If J-Bot interests you, here are a few ways to help:
 
----
+- ⭐ **Star the repository** to bookmark it and show your interest.
+- 🐛 Report reproducible bugs.
+- 💡 Suggest practical features.
+- 🔧 Contribute improvements.
+- 📢 Share a real demonstration with developers who may find it useful.
 
-## ⭐ Support the Project
-
-If you like the idea behind J-bot:
-
-**⭐ Star the repository**
-
-It helps the project get discovered and motivates continued development.
-
-You can also:
-
-* 🐛 Report bugs
-* 💡 Suggest features
-* 🔧 Contribute code
-* 📢 Share the project
-
----
+Every useful issue, contribution, and piece of feedback helps the project improve.
 
 ## 📜 License
 
-License information will be added as the project develops.
+J-Bot is distributed under the [MIT License](LICENSE).
+
+See the `LICENSE` file for the complete terms.
 
 ---
 
 <div align="center">
 
-### 🤖 J-bot
+### 🤖 J-Bot
 
 **Think. Use tools. Get things done.**
 
-Built with Python 🐍
+Built with Python, curiosity, and a lot of experimentation.
 
-<br>
-
-**[GitHub](https://github.com/gggff123/J-bot)**
+[**Explore J-Bot on GitHub**](https://github.com/gggff123/J-bot)
 
 </div>
 
-# Honourable Mentions
--- @tomthecatto (Thanks)
