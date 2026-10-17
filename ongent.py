@@ -9,6 +9,8 @@ import platform
 from rich.console import Console
 from openai import OpenAI
 import psutil
+from github import Github
+from github.GithubException import GithubException
 console=Console()
 # ============================================================
 # CONFIG
@@ -605,6 +607,152 @@ def create_file(file_name: str, value: str):
             with open(file_name, "w") as f:
                 f.write(value)
             return {"Output": f"Created a file {file_name}"}
+def get_github(token: str):
+    """Create a GitHub client using the authenticated user's token."""
+    return Github(token)
+
+@tool("Fetches a Pull request github")
+def github_get_pull_request(token: str, repository: str, pr_number: int) -> dict:
+    """Inspect a pull request."""
+    try:
+        gh = get_github(token)
+        pr = gh.get_repo(repository).get_pull(pr_number)
+        return {
+            "number": pr.number,
+            "title": pr.title,
+            "body": pr.body or "",
+            "state": pr.state,
+            "author": pr.user.login,
+            "head": pr.head.ref,
+            "base": pr.base.ref,
+            "url": pr.html_url,
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+@tool("Creates and allows to post a comment on github")
+def github_comment_on_pr(
+    token: str, repository: str, pr_number: int, comment: str
+    ) -> dict:
+    """Post a conversation comment on a pull request."""
+    try:
+        gh = get_github(token)
+        pr = gh.get_repo(repository).get_pull(pr_number)
+        result = pr.create_issue_comment(comment)
+        return {"success": True, "comment_id": result.id, "url": result.html_url}
+    except GithubException as e:
+        return {"error": str(e)}
+
+@tool("Creates Branch github")
+def github_create_branch(
+    token: str, repository: str, branch_name: str, base_branch: str
+    ) -> dict:
+    """Create a branch from an existing branch."""
+    try:
+        gh = get_github(token)
+        repo = gh.get_repo(repository)
+        base = repo.get_branch(base_branch)
+        repo.create_git_ref(
+            ref=f"refs/heads/{branch_name}",
+            sha=base.commit.sha,
+        )
+        return {"success": True, "branch": branch_name}
+    except GithubException as e:
+        return {"error": str(e)}
+
+@tool("Pushes github changes")
+def github_push_changes(
+    token: str,
+    repository: str,
+    branch_name: str,
+    commit_message: str,
+    files: dict[str, str],
+    ) -> dict:
+    """Create a commit and push text file changes to an existing branch.
+
+    files maps repository-relative paths to complete file contents.
+    Existing files are replaced; new files are created.
+    """
+    try:
+        gh = get_github(token)
+        repo = gh.get_repo(repository)
+        ref = repo.get_git_ref(f"heads/{branch_name}")
+        parent = repo.get_git_commit(ref.object.sha)
+
+        tree_items = []
+        for path, content in files.items():
+            if (
+                not path
+                or path.startswith("/")
+                or "\\" in path
+                or any(p in ("", ".", "..") for p in path.split("/"))
+            ):
+                return {"error": f"Invalid file path: {path}"}
+
+            blob = repo.create_git_blob(content, "utf-8")
+            tree_items.append(
+                {
+                    "path": path,
+                    "mode": "100644",
+                    "type": "blob",
+                    "sha": blob.sha,
+                }
+            )
+
+        tree = repo.create_git_tree(tree_items, parent.tree)
+        commit = repo.create_git_commit(commit_message, tree, [parent])
+
+        # Avoid overwriting concurrent changes.
+        current_ref = repo.get_git_ref(f"heads/{branch_name}")
+        if current_ref.object.sha != parent.sha:
+            return {"error": "Branch changed concurrently; retry after reviewing."}
+
+        current_ref.edit(commit.sha, force=False)
+
+        return {
+            "success": True,
+            "commit_sha": commit.sha,
+            "commit_url": commit.html_url,
+            "branch": branch_name,
+            "files_changed": list(files.keys()),
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+@tool("Create's a Pull request in github")
+def github_create_pull_request(
+    token: str,
+    repository: str,
+    title: str,
+    body: str,
+    head_branch: str,
+    base_branch: str,
+    draft: bool = False,
+    ) -> dict:
+    """Create a pull request from a head branch into a base branch."""
+    try:
+        if head_branch == base_branch:
+            return {"error": "Head and base branches must differ."}
+
+        gh = get_github(token)
+        repo = gh.get_repo(repository)
+
+        pr = repo.create_pull(
+            title=title,
+            body=body,
+            head=head_branch,
+            base=base_branch,
+            draft=draft,
+        )
+
+        return {
+            "success": True,
+            "number": pr.number,
+            "title": pr.title,
+            "url": pr.html_url,
+        }
+    except GithubException as e:
+        return {"error": str(e)}
 # ============================================================
 # SYSTEM PROMPT
 # ============================================================
