@@ -25,6 +25,7 @@ variables = [
     "OPENAI_API_KEY",
     "OPENAI_BASE_URL",
     "OPENAI_MODEL",
+    "GITHUB_ACCESS_TOKEN",
 ]
 
 config = {var: os.getenv(var, "").strip() for var in variables}
@@ -38,6 +39,7 @@ if missing:
         "OPENAI_API_KEY": "Enter API key: ",
         "OPENAI_BASE_URL": "Enter base URL: ",
         "OPENAI_MODEL": "Enter model: ",
+        "GITHUB_ACCESS_TOKEN": "Enter token(write): ",
     }
 
     for var in missing:
@@ -50,6 +52,7 @@ if missing:
 AI_API_KEY = config["OPENAI_API_KEY"]
 AI_BASE_URL = config["OPENAI_BASE_URL"]
 AI_MODEL = config["OPENAI_MODEL"]
+GIT_TOKEN = config["GITHUB_ACCESS_TOKEN"]
 
 # ============================================================
 # CLIENTS
@@ -667,10 +670,10 @@ def get_github(token: str):
 
 
 @tool("Fetches a Pull request github")
-def github_get_pull_request(token: str, repository: str, pr_number: int) -> dict:
+def github_get_pull_request(repository: str, pr_number: int) -> dict:
     """Inspect a pull request."""
     try:
-        gh = get_github(token)
+        gh = get_github(GIT_TOKEN)
         pr = gh.get_repo(repository).get_pull(pr_number)
         return {
             "number": pr.number,
@@ -687,12 +690,10 @@ def github_get_pull_request(token: str, repository: str, pr_number: int) -> dict
 
 
 @tool("Creates and allows to post a comment on github")
-def github_comment_on_pr(
-    token: str, repository: str, pr_number: int, comment: str
-) -> dict:
+def github_comment_on_pr(repository: str, pr_number: int, comment: str) -> dict:
     """Post a conversation comment on a pull request."""
     try:
-        gh = get_github(token)
+        gh = get_github(GIT_TOKEN)
         pr = gh.get_repo(repository).get_pull(pr_number)
         result = pr.create_issue_comment(comment)
         return {"success": True, "comment_id": result.id, "url": result.html_url}
@@ -701,12 +702,10 @@ def github_comment_on_pr(
 
 
 @tool("Creates Branch github")
-def github_create_branch(
-    token: str, repository: str, branch_name: str, base_branch: str
-) -> dict:
+def github_create_branch(repository: str, branch_name: str, base_branch: str) -> dict:
     """Create a branch from an existing branch."""
     try:
-        gh = get_github(token)
+        gh = get_github(GIT_TOKEN)
         repo = gh.get_repo(repository)
         base = repo.get_branch(base_branch)
         repo.create_git_ref(
@@ -720,7 +719,6 @@ def github_create_branch(
 
 @tool("Pushes github changes")
 def github_push_changes(
-    token: str,
     repository: str,
     branch_name: str,
     commit_message: str,
@@ -732,7 +730,7 @@ def github_push_changes(
     Existing files are replaced; new files are created.
     """
     try:
-        gh = get_github(token)
+        gh = get_github(GIT_TOKEN)
         repo = gh.get_repo(repository)
         ref = repo.get_git_ref(f"heads/{branch_name}")
         parent = repo.get_git_commit(ref.object.sha)
@@ -780,7 +778,6 @@ def github_push_changes(
 
 @tool("Create's a Pull request in github")
 def github_create_pull_request(
-    token: str,
     repository: str,
     title: str,
     body: str,
@@ -793,7 +790,7 @@ def github_create_pull_request(
         if head_branch == base_branch:
             return {"error": "Head and base branches must differ."}
 
-        gh = get_github(token)
+        gh = get_github(GIT_TOKEN)
         repo = gh.get_repo(repository)
 
         pr = repo.create_pull(
@@ -814,6 +811,159 @@ def github_create_pull_request(
         return {"error": str(e)}
 
 
+@tool("Create a new issue in a GitHub repository")
+def github_create_issue(
+    repository: str,
+    title: str,
+    body: str,
+) -> dict:
+    """Create an issue in a repository. Repository format: owner/repo."""
+    try:
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+
+        issue = repo.create_issue(title=title, body=body)
+
+        return {
+            "success": True,
+            "number": issue.number,
+            "title": issue.title,
+            "url": issue.html_url,
+        }
+
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
+
+@tool("Close an issue in a GitHub repository")
+def github_close_issue(repository: str, issue_number: int) -> dict:
+    """Close an existing GitHub issue."""
+    try:
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+        issue = repo.get_issue(issue_number)
+
+        issue.edit(state="closed")
+
+        return {
+            "success": True,
+            "action": "closed",
+            "number": issue.number,
+            "url": issue.html_url
+        }
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
+
+
+@tool("Reopen a closed GitHub issue")
+def github_reopen_issue(repository: str, issue_number: int) -> dict:
+    """Reopen a previously closed GitHub issue."""
+    try:
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+        issue = repo.get_issue(issue_number)
+
+        issue.edit(state="open")
+
+        return {
+            "success": True,
+            "action": "reopened",
+            "number": issue.number,
+            "url": issue.html_url
+        }
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
+
+
+@tool("Close a pull request in GitHub")
+def github_close_pr(repository: str, pr_number: int) -> dict:
+    """Close an existing pull request without merging it."""
+    try:
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+        pr = repo.get_pull(pr_number)
+
+        pr.edit(state="closed")
+
+        return {
+            "success": True,
+            "action": "closed",
+            "number": pr.number,
+            "url": pr.html_url
+        }
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
+
+
+@tool("Reopen a closed GitHub pull request")
+def github_reopen_pr(repository: str, pr_number: int) -> dict:
+    """Reopen a previously closed pull request."""
+    try:
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+        pr = repo.get_pull(pr_number)
+
+        pr.edit(state="open")
+
+        return {
+            "success": True,
+            "action": "reopened",
+            "number": pr.number,
+            "url": pr.html_url
+        }
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
+
+
+@tool("Merge a GitHub pull request")
+def github_merge_pr(
+    repository: str,
+    pr_number: int,
+    merge_method: str = "merge",
+    commit_message: str = ""
+) -> dict:
+    """
+    Merge a pull request.
+    merge_method must be merge, squash, or rebase.
+    """
+    try:
+        if merge_method not in ("merge", "squash", "rebase"):
+            return {
+                "success": False,
+                "error": "Invalid merge method. Use merge, squash, or rebase."
+            }
+
+        gh = get_github(GIT_TOKEN)
+        repo = gh.get_repo(repository)
+        pr = repo.get_pull(pr_number)
+
+        if pr.merged:
+            return {
+                "success": False,
+                "error": "This pull request is already merged."
+            }
+
+        if pr.state != "open":
+            return {
+                "success": False,
+                "error": "Cannot merge a closed pull request."
+            }
+
+        result = pr.merge(
+            commit_message=commit_message or None,
+            merge_method=merge_method
+        )
+
+        return {
+            "success": result.merged,
+            "merged": result.merged,
+            "message": result.message,
+            "sha": result.sha,
+            "number": pr_number,
+            "url": pr.html_url
+        }
+
+    except GithubException as e:
+        return {"success": False, "error": str(e)}
 # ============================================================
 # SYSTEM PROMPT
 # ============================================================
