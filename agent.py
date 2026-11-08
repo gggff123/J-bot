@@ -4,7 +4,7 @@ import requests
 from urllib.parse import quote
 import shutil
 import os
-from dotenv import load_dotenv , set_key
+from dotenv import load_dotenv, set_key
 import platform
 import psutil
 from github import Github
@@ -12,7 +12,6 @@ from github.GithubException import GithubException
 
 try:
     console = Console()
-
 
     env_file = "     .env"
     value = input("Enter your GitHub token: ").strip()

@@ -9,14 +9,16 @@ try:
     from rich.live import Live
     from rich.spinner import Spinner
     from rich.text import Text
+
     # Ignore the specific huggingface_hub deprecation warning
-    warnings.filterwarnings("ignore", category=UserWarning, message=".*local_dir_use_symlinks.*")
+    warnings.filterwarnings(
+        "ignore", category=UserWarning, message=".*local_dir_use_symlinks.*"
+    )
     # ============================================================
     # CONSOLE
     # ============================================================
 
     console = Console()
-
 
     # ============================================================
     # MODEL
@@ -35,18 +37,15 @@ try:
         verbose=False,
     )
 
-
     # ============================================================
     # TOOLS
     # ============================================================
 
     TOOLS = {}
 
-
     def tool(func):
         TOOLS[func.__name__] = func
         return func
-
 
     def get_tool_definitions():
 
@@ -78,28 +77,27 @@ try:
                 else:
                     param_type = "string"
 
-                properties[param_name] = {
-                    "type": param_type
-                }
+                properties[param_name] = {"type": param_type}
 
                 if param.default is inspect.Parameter.empty:
                     required.append(param_name)
 
-            definitions.append({
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": func.__doc__ or "",
-                    "parameters": {
-                        "type": "object",
-                        "properties": properties,
-                        "required": required,
+            definitions.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": func.__doc__ or "",
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                        },
                     },
-                },
-            })
+                }
+            )
 
         return definitions
-
 
     # ============================================================
     # GENERATE STREAM
@@ -140,14 +138,7 @@ try:
 
             while not stop_status.is_set():
 
-                live.update(
-                    Spinner(
-                        "dots",
-                        text=Text(
-                            statuses[index]
-                        )
-                    )
-                )
+                live.update(Spinner("dots", text=Text(statuses[index])))
 
                 index = (index + 1) % len(statuses)
 
@@ -183,10 +174,7 @@ try:
                 if not choices:
                     continue
 
-                delta = choices[0].get(
-                    "delta",
-                    {}
-                )
+                delta = choices[0].get("delta", {})
 
                 piece = delta.get("content")
 
@@ -205,18 +193,14 @@ try:
                     stop_status.set()
 
                     if status_thread:
-                        status_thread.join(
-                            timeout=1
-                        )
+                        status_thread.join(timeout=1)
 
                     # Remove Live display
                     live.update("")
                     live.stop()
                     live = None
 
-                    console.print(
-                        "\n[bold green]MODEL:[/]"
-                    )
+                    console.print("\n[bold green]MODEL:[/]")
 
                 # ------------------------------------------------
                 # Save token
@@ -236,16 +220,13 @@ try:
             stop_status.set()
 
             if status_thread:
-                status_thread.join(
-                    timeout=1
-                )
+                status_thread.join(timeout=1)
 
             if live is not None:
                 live.update("")
                 live.stop()
 
         return full_text
-
 
     # ============================================================
     # TOOL CALL PARSER
@@ -289,10 +270,12 @@ try:
 
                 arguments = function_match.group(2).strip()
 
-                calls.append({
-                    "name": name,
-                    "arguments": arguments,
-                })
+                calls.append(
+                    {
+                        "name": name,
+                        "arguments": arguments,
+                    }
+                )
 
             return calls
 
@@ -316,13 +299,14 @@ try:
 
         for name, arguments in bare_matches:
 
-            calls.append({
-                "name": name,
-                "arguments": arguments.strip(),
-            })
+            calls.append(
+                {
+                    "name": name,
+                    "arguments": arguments.strip(),
+                }
+            )
 
         return calls
-
 
     # ============================================================
     # EXECUTE TOOL
@@ -332,9 +316,7 @@ try:
 
         if name not in TOOLS:
 
-            return (
-                f"Tool '{name}' does not exist."
-            )
+            return f"Tool '{name}' does not exist."
 
         func = TOOLS[name]
 
@@ -378,9 +360,7 @@ try:
 
             for arg in call.args:
 
-                positional_args.append(
-                    ast.literal_eval(arg)
-                )
+                positional_args.append(ast.literal_eval(arg))
 
             # ----------------------------------------------------
             # Keyword arguments
@@ -390,16 +370,9 @@ try:
 
                 if keyword.arg is None:
 
-                    return (
-                        "Tool error: **kwargs style "
-                        "arguments are not supported."
-                    )
+                    return "Tool error: **kwargs style " "arguments are not supported."
 
-                keyword_args[
-                    keyword.arg
-                ] = ast.literal_eval(
-                    keyword.value
-                )
+                keyword_args[keyword.arg] = ast.literal_eval(keyword.value)
 
             # ----------------------------------------------------
             # Execute
@@ -414,11 +387,7 @@ try:
 
         except Exception as e:
 
-            return (
-                f"Tool execution error: "
-                f"{type(e).__name__}: {e}"
-            )
-
+            return f"Tool execution error: " f"{type(e).__name__}: {e}"
 
     # ============================================================
     # AGENT
@@ -433,8 +402,7 @@ try:
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful AI assistant. "
-                    "Use tools when necessary."
+                    "You are a helpful AI assistant. " "Use tools when necessary."
                 ),
             },
             {
@@ -458,9 +426,7 @@ try:
             # Check tool calls
             # ----------------------------------------------------
 
-            tool_calls = parse_tool_calls(
-                response_text
-            )
+            tool_calls = parse_tool_calls(response_text)
 
             # ----------------------------------------------------
             # Normal response
@@ -476,10 +442,12 @@ try:
             # Save assistant message
             # ----------------------------------------------------
 
-            messages.append({
-                "role": "assistant",
-                "content": response_text,
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_text,
+                }
+            )
 
             # ----------------------------------------------------
             # Execute tools
@@ -491,35 +459,29 @@ try:
 
                 arguments = call["arguments"]
 
-                console.print(
-                    f"\n[bold yellow]CALLING[/] "
-                    f"[cyan]{name}[/]"
-                )
+                console.print(f"\n[bold yellow]CALLING[/] " f"[cyan]{name}[/]")
 
-                console.print(
-                    f"[dim]{arguments}[/]"
-                )
+                console.print(f"[dim]{arguments}[/]")
 
                 result = execute_tool(
                     name,
                     arguments,
                 )
 
-                console.print(
-                    "[bold blue]TOOL RESULT:[/]"
-                )
+                console.print("[bold blue]TOOL RESULT:[/]")
 
-                console.print(
-                    result
-                )
+                console.print(result)
 
                 # ------------------------------------------------
                 # Add result back to model
                 # ------------------------------------------------
 
-                messages.append({
-                    "role": "tool",
-                    "content": result,
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": result,
+                    }
+                )
+
 except ValueError:
     print("\nContext Limit reached.")

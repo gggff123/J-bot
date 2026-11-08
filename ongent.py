@@ -834,6 +834,7 @@ def github_create_issue(
     except GithubException as e:
         return {"success": False, "error": str(e)}
 
+
 @tool("Close an issue in a GitHub repository")
 def github_close_issue(repository: str, issue_number: int) -> dict:
     """Close an existing GitHub issue."""
@@ -848,7 +849,7 @@ def github_close_issue(repository: str, issue_number: int) -> dict:
             "success": True,
             "action": "closed",
             "number": issue.number,
-            "url": issue.html_url
+            "url": issue.html_url,
         }
     except GithubException as e:
         return {"success": False, "error": str(e)}
@@ -868,7 +869,7 @@ def github_reopen_issue(repository: str, issue_number: int) -> dict:
             "success": True,
             "action": "reopened",
             "number": issue.number,
-            "url": issue.html_url
+            "url": issue.html_url,
         }
     except GithubException as e:
         return {"success": False, "error": str(e)}
@@ -888,7 +889,7 @@ def github_close_pr(repository: str, pr_number: int) -> dict:
             "success": True,
             "action": "closed",
             "number": pr.number,
-            "url": pr.html_url
+            "url": pr.html_url,
         }
     except GithubException as e:
         return {"success": False, "error": str(e)}
@@ -908,7 +909,7 @@ def github_reopen_pr(repository: str, pr_number: int) -> dict:
             "success": True,
             "action": "reopened",
             "number": pr.number,
-            "url": pr.html_url
+            "url": pr.html_url,
         }
     except GithubException as e:
         return {"success": False, "error": str(e)}
@@ -919,7 +920,7 @@ def github_merge_pr(
     repository: str,
     pr_number: int,
     merge_method: str = "merge",
-    commit_message: str = ""
+    commit_message: str = "",
 ) -> dict:
     """
     Merge a pull request.
@@ -929,7 +930,7 @@ def github_merge_pr(
         if merge_method not in ("merge", "squash", "rebase"):
             return {
                 "success": False,
-                "error": "Invalid merge method. Use merge, squash, or rebase."
+                "error": "Invalid merge method. Use merge, squash, or rebase.",
             }
 
         gh = get_github(GIT_TOKEN)
@@ -937,20 +938,13 @@ def github_merge_pr(
         pr = repo.get_pull(pr_number)
 
         if pr.merged:
-            return {
-                "success": False,
-                "error": "This pull request is already merged."
-            }
+            return {"success": False, "error": "This pull request is already merged."}
 
         if pr.state != "open":
-            return {
-                "success": False,
-                "error": "Cannot merge a closed pull request."
-            }
+            return {"success": False, "error": "Cannot merge a closed pull request."}
 
         result = pr.merge(
-            commit_message=commit_message or None,
-            merge_method=merge_method
+            commit_message=commit_message or None, merge_method=merge_method
         )
 
         return {
@@ -959,11 +953,13 @@ def github_merge_pr(
             "message": result.message,
             "sha": result.sha,
             "number": pr_number,
-            "url": pr.html_url
+            "url": pr.html_url,
         }
 
     except GithubException as e:
         return {"success": False, "error": str(e)}
+
+
 # ============================================================
 # SYSTEM PROMPT
 # ============================================================
