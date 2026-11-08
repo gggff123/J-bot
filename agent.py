@@ -4,7 +4,7 @@ import requests
 from urllib.parse import quote
 import shutil
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv , set_key
 import platform
 import psutil
 from github import Github
@@ -12,7 +12,16 @@ from github.GithubException import GithubException
 
 try:
     console = Console()
-    load_dotenv()
+    env_file = ".env"
+    value = input("Enter your GitHub token: ").strip()
+
+    if value:
+        set_key(env_file, "GITHUB_ACCESS_TOKEN", value)
+        print("GitHub token saved to .env")
+    else:
+        print("No value entered. Nothing saved.")
+    load_dotenv(env_file)
+    GIT_TOKEN = os.getenv("GITHUB_ACCESS_TOKEN")
 
     # -----------------------------------------
     # FILE OPERATIONS
@@ -461,6 +470,7 @@ try:
 
     def get_github(token: str):
         """Create a GitHub client using the authenticated user's token."""
+        token = GIT_TOKEN
         return Github(token)
 
     @tool
@@ -605,6 +615,155 @@ try:
             }
         except GithubException as e:
             return {"error": str(e)}
+
+    @tool
+    def github_create_issue(
+        repository: str,
+        title: str,
+        body: str,
+    ) -> dict:
+        """Create an issue in a repository. Repository format: owner/repo."""
+        try:
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+
+            issue = repo.create_issue(title=title, body=body)
+
+            return {
+                "success": True,
+                "number": issue.number,
+                "title": issue.title,
+                "url": issue.html_url,
+            }
+
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
+
+    @tool
+    def github_close_issue(repository: str, issue_number: int) -> dict:
+        """Close an existing GitHub issue."""
+        try:
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+            issue = repo.get_issue(issue_number)
+
+            issue.edit(state="closed")
+
+            return {
+                "success": True,
+                "action": "closed",
+                "number": issue.number,
+                "url": issue.html_url,
+            }
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
+
+    @tool
+    def github_reopen_issue(repository: str, issue_number: int) -> dict:
+        """Reopen a previously closed GitHub issue."""
+        try:
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+            issue = repo.get_issue(issue_number)
+
+            issue.edit(state="open")
+
+            return {
+                "success": True,
+                "action": "reopened",
+                "number": issue.number,
+                "url": issue.html_url,
+            }
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
+
+    @tool
+    def github_close_pr(repository: str, pr_number: int) -> dict:
+        """Close an existing pull request without merging it."""
+        try:
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+            pr = repo.get_pull(pr_number)
+
+            pr.edit(state="closed")
+
+            return {
+                "success": True,
+                "action": "closed",
+                "number": pr.number,
+                "url": pr.html_url,
+            }
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
+
+    @tool
+    def github_reopen_pr(repository: str, pr_number: int) -> dict:
+        """Reopen a previously closed pull request."""
+        try:
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+            pr = repo.get_pull(pr_number)
+
+            pr.edit(state="open")
+
+            return {
+                "success": True,
+                "action": "reopened",
+                "number": pr.number,
+                "url": pr.html_url,
+            }
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
+
+    @tool
+    def github_merge_pr(
+        repository: str,
+        pr_number: int,
+        merge_method: str = "merge",
+        commit_message: str = "",
+    ) -> dict:
+        """
+        Merge a pull request.
+        merge_method must be merge, squash, or rebase.
+        """
+        try:
+            if merge_method not in ("merge", "squash", "rebase"):
+                return {
+                    "success": False,
+                    "error": "Invalid merge method. Use merge, squash, or rebase.",
+                }
+
+            gh = get_github(GIT_TOKEN)
+            repo = gh.get_repo(repository)
+            pr = repo.get_pull(pr_number)
+
+            if pr.merged:
+                return {
+                    "success": False,
+                    "error": "This pull request is already merged.",
+                }
+
+            if pr.state != "open":
+                return {
+                    "success": False,
+                    "error": "Cannot merge a closed pull request.",
+                }
+
+            result = pr.merge(
+                commit_message=commit_message or None, merge_method=merge_method
+            )
+
+            return {
+                "success": result.merged,
+                "merged": result.merged,
+                "message": result.message,
+                "sha": result.sha,
+                "number": pr_number,
+                "url": pr.html_url,
+            }
+
+        except GithubException as e:
+            return {"success": False, "error": str(e)}
 
     # ----------------
     # other tools
