@@ -13,7 +13,7 @@ from github.GithubException import GithubException
 try:
     console = Console()
 
-    env_file = "     .env"
+    env_file = ".env"
     value = input("Enter your GitHub token: ").strip()
 
     if value:
