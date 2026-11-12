@@ -73,6 +73,7 @@ client = OpenAI(
 
 TOOL_REGISTRY = {}
 
+
 def format_github_comment(comment: str) -> str:
     """Format comments with a professional J-Bot attribution."""
 
@@ -92,12 +93,9 @@ def format_github_comment(comment: str) -> str:
 
     return f"{comment}\n\n{signature}"
 
+
 def close_github_item(
-    repository: str,
-    number: int,
-    item_type: str,
-    reason: str,
-    duplicate_of: int = 0
+    repository: str, number: int, item_type: str, reason: str, duplicate_of: int = 0
 ) -> dict:
     """Comment on and close a GitHub issue or PR."""
 
@@ -113,10 +111,7 @@ def close_github_item(
             return {"success": False, "error": "Invalid item type."}
 
         if item.state == "closed":
-            return {
-                "success": False,
-                "error": f"This {item_type} is already closed."
-            }
+            return {"success": False, "error": f"This {item_type} is already closed."}
 
         if reason == "duplicate":
             if duplicate_of:
@@ -160,14 +155,12 @@ def close_github_item(
             "type": item_type,
             "number": number,
             "comment_url": comment.html_url,
-            "url": item.html_url
+            "url": item.html_url,
         }
 
     except GithubException as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
+
 
 def tool(description):
     """
@@ -291,50 +284,40 @@ ram_info = psutil.virtual_memory()
 ram_total = ram_info.total / (1024**3)
 ram_available = ram_info.available / (1024**3)
 
-@tool("Edit, create or overwrite a file inside a local Git repository. Requires repository path, relative file path and complete new file content.")
-def edit_repo_file(
-    repository_path: str,
-    file_path: str,
-    content: str
-) -> dict:
+
+@tool(
+    "Edit, create or overwrite a file inside a local Git repository. Requires repository path, relative file path and complete new file content."
+)
+def edit_repo_file(repository_path: str, file_path: str, content: str) -> dict:
     """Edit or create a file inside a local Git repository."""
 
     try:
         repo = Path(repository_path).resolve()
 
         if not repo.is_dir():
-            return {
-                "success": False,
-                "error": "Repository directory does not exist."
-            }
+            return {"success": False, "error": "Repository directory does not exist."}
 
         if not (repo / ".git").exists():
             return {
                 "success": False,
-                "error": "The specified directory is not a Git repository."
+                "error": "The specified directory is not a Git repository.",
             }
 
         relative_path = Path(file_path)
 
         if relative_path.is_absolute():
-            return {
-                "success": False,
-                "error": "Use a repository-relative file path."
-            }
+            return {"success": False, "error": "Use a repository-relative file path."}
 
         target = (repo / relative_path).resolve()
 
         if not target.is_relative_to(repo):
             return {
                 "success": False,
-                "error": "File path escapes repository directory."
+                "error": "File path escapes repository directory.",
             }
 
         if target.exists() and target.is_dir():
-            return {
-                "success": False,
-                "error": "Target path is a directory."
-            }
+            return {"success": False, "error": "Target path is a directory."}
 
         target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -345,14 +328,12 @@ def edit_repo_file(
             "action": "updated" if target.exists() else "created",
             "file": str(target),
             "repository": str(repo),
-            "bytes_written": target.stat().st_size
+            "bytes_written": target.stat().st_size,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
+
 
 @tool(
     "Execute a Windows CMD command in a new visible terminal, "
@@ -378,27 +359,18 @@ def run_command(
     """
 
     if os.name != "nt":
-        return {
-            "success": False,
-            "error": "This tool currently supports Windows only."
-        }
+        return {"success": False, "error": "This tool currently supports Windows only."}
 
     if not command or not command.strip():
-        return {
-            "success": False,
-            "error": "Command cannot be empty."
-        }
+        return {"success": False, "error": "Command cannot be empty."}
 
     if "\n" in command or "\r" in command:
-        return {
-            "success": False,
-            "error": "Provide one CMD command per tool call."
-        }
+        return {"success": False, "error": "Provide one CMD command per tool call."}
 
     if not 1 <= timeout_seconds <= 1800:
         return {
             "success": False,
-            "error": "timeout_seconds must be between 1 and 1800."
+            "error": "timeout_seconds must be between 1 and 1800.",
         }
 
     directory = Path(working_directory).expanduser().resolve()
@@ -406,39 +378,35 @@ def run_command(
     if not directory.is_dir():
         return {
             "success": False,
-            "error": f"Working directory does not exist: {directory}"
+            "error": f"Working directory does not exist: {directory}",
         }
 
     log_path = None
     batch_path = None
 
     try:
-        fd, log_name = tempfile.mkstemp(
-            prefix="jbot_command_",
-            suffix=".log"
-        )
+        fd, log_name = tempfile.mkstemp(prefix="jbot_command_", suffix=".log")
         os.close(fd)
 
         log_path = Path(log_name)
         batch_path = log_path.with_suffix(".cmd")
 
         # The exit code is saved BEFORE displaying the output.
-        batch_script = "\r\n".join([
-            "@echo off",
-            "chcp 65001 >nul",
-            f'cd /d "{directory}"',
-            f'{command} > "{log_path}" 2>&1',
-            'set "J_BOT_EXIT=%errorlevel%"',
-            f'type "{log_path}"',
-            "echo.",
-            "echo Exit code: %J_BOT_EXIT%",
-            f'>>"{log_path}" echo __J_BOT_EXIT__=%J_BOT_EXIT%',
-        ])
-
-        batch_path.write_text(
-            batch_script,
-            encoding="utf-8"
+        batch_script = "\r\n".join(
+            [
+                "@echo off",
+                "chcp 65001 >nul",
+                f'cd /d "{directory}"',
+                f'{command} > "{log_path}" 2>&1',
+                'set "J_BOT_EXIT=%errorlevel%"',
+                f'type "{log_path}"',
+                "echo.",
+                "echo Exit code: %J_BOT_EXIT%",
+                f'>>"{log_path}" echo __J_BOT_EXIT__=%J_BOT_EXIT%',
+            ]
         )
+
+        batch_path.write_text(batch_script, encoding="utf-8")
 
         # Open a new visible CMD window.
         process = subprocess.Popen(
@@ -453,19 +421,14 @@ def run_command(
         while time.monotonic() < deadline:
 
             try:
-                output = log_path.read_text(
-                    encoding="utf-8",
-                    errors="replace"
-                )
+                output = log_path.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 output = ""
 
             marker = "__J_BOT_EXIT__="
 
             if marker in output:
-                captured_output, exit_text = output.rsplit(
-                    marker, 1
-                )
+                captured_output, exit_text = output.rsplit(marker, 1)
 
                 exit_text = exit_text.splitlines()[0].strip()
                 exit_code = int(exit_text)
@@ -506,11 +469,9 @@ def run_command(
             "timed_out": False,
         }
 
+
 @tool("Read a file inside a local Git repository before editing it.")
-def read_repo_file(
-    repository_path: str,
-    file_path: str
-) -> dict:
+def read_repo_file(repository_path: str, file_path: str) -> dict:
     """Read a repository file."""
 
     try:
@@ -535,12 +496,11 @@ def read_repo_file(
         return {
             "success": True,
             "file": str(target),
-            "content": target.read_text(encoding="utf-8")
+            "content": target.read_text(encoding="utf-8"),
         }
 
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 
 @tool("Get system information of the device")
@@ -1040,12 +1000,10 @@ def github_get_pull_request(repository: str, pr_number: int) -> dict:
         return {"error": str(e)}
 
 
-@tool("Post a comment on a GitHub pull request. Always use the provided comment and append the J-bot signature.")
-def github_comment_on_pr(
-    repository: str,
-    pr_number: int,
-    comment: str
-) -> dict:
+@tool(
+    "Post a comment on a GitHub pull request. Always use the provided comment and append the J-bot signature."
+)
+def github_comment_on_pr(repository: str, pr_number: int, comment: str) -> dict:
     """Post a formatted conversation comment on a pull request."""
     try:
         gh = get_github(GIT_TOKEN)
@@ -1062,7 +1020,7 @@ def github_comment_on_pr(
             "number": pr_number,
             "comment": formatted_comment,
             "comment_id": result.id,
-            "url": result.html_url
+            "url": result.html_url,
         }
 
     except GithubException as e:
@@ -1070,12 +1028,9 @@ def github_comment_on_pr(
     except ValueError as e:
         return {"success": False, "error": str(e)}
 
+
 @tool("Post a comment on a GitHub issue. Always append the J-bot signature.")
-def github_comment_on_issue(
-    repository: str,
-    issue_number: int,
-    comment: str
-) -> dict:
+def github_comment_on_issue(repository: str, issue_number: int, comment: str) -> dict:
     """Post a formatted comment on a GitHub issue."""
     try:
         gh = get_github(GIT_TOKEN)
@@ -1092,13 +1047,14 @@ def github_comment_on_issue(
             "number": issue_number,
             "comment": formatted_comment,
             "comment_id": result.id,
-            "url": result.html_url
+            "url": result.html_url,
         }
 
     except GithubException as e:
         return {"success": False, "error": str(e)}
     except ValueError as e:
         return {"success": False, "error": str(e)}
+
 
 @tool("Creates Branch github")
 def github_create_branch(repository: str, branch_name: str, base_branch: str) -> dict:
@@ -1358,64 +1314,41 @@ def github_merge_pr(
     except GithubException as e:
         return {"success": False, "error": str(e)}
 
-@tool("Close a GitHub issue as a duplicate. Optionally provide the original issue number.")
+
+@tool(
+    "Close a GitHub issue as a duplicate. Optionally provide the original issue number."
+)
 def github_close_issue_duplicate(
-    repository: str,
-    issue_number: int,
-    duplicate_of: int = 0
+    repository: str, issue_number: int, duplicate_of: int = 0
 ) -> dict:
 
     return close_github_item(
-        repository,
-        issue_number,
-        "issue",
-        "duplicate",
-        duplicate_of
+        repository, issue_number, "issue", "duplicate", duplicate_of
     )
 
 
 @tool("Close a GitHub issue as stale due to inactivity.")
-def github_close_issue_stale(
-    repository: str,
-    issue_number: int
-) -> dict:
+def github_close_issue_stale(repository: str, issue_number: int) -> dict:
 
-    return close_github_item(
-        repository,
-        issue_number,
-        "issue",
-        "stale"
-    )
+    return close_github_item(repository, issue_number, "issue", "stale")
 
 
-@tool("Close a GitHub pull request as a duplicate. Optionally provide the original issue or PR number.")
+@tool(
+    "Close a GitHub pull request as a duplicate. Optionally provide the original issue or PR number."
+)
 def github_close_pr_duplicate(
-    repository: str,
-    pr_number: int,
-    duplicate_of: int = 0
+    repository: str, pr_number: int, duplicate_of: int = 0
 ) -> dict:
 
     return close_github_item(
-        repository,
-        pr_number,
-        "pull_request",
-        "duplicate",
-        duplicate_of
+        repository, pr_number, "pull_request", "duplicate", duplicate_of
     )
 
 
 @tool("Close a GitHub pull request as stale due to inactivity.")
-def github_close_pr_stale(
-    repository: str,
-    pr_number: int
-) -> dict:
+def github_close_pr_stale(repository: str, pr_number: int) -> dict:
 
-    return close_github_item(
-        repository,
-        pr_number,
-        "pull_request",
-        "stale"
-    )
+    return close_github_item(repository, pr_number, "pull_request", "stale")
 
 
 # ============================================================
