@@ -268,3 +268,20 @@ Built with Python, curiosity, and a lot of experimentation.
 
 </div>
 
+
+
+## GitHub App authentication
+
+J-Bot authenticates as its GitHub App installation (for example, `J-Bot[bot]`) instead of using a personal access token.
+
+Add these values to your local `.env` file:
+
+```env
+GITHUB_APP_ID=your_app_id
+GITHUB_INSTALLATION_ID=your_installation_id
+GITHUB_PRIVATE_KEY_PATH=C:\\path\\outside\\repo\\github-app.pem
+```
+
+Generate a private key from your GitHub App settings and install the app on the repositories it should manage. Keep the `.pem` file and `.env` file private; never commit either. The app needs the repository permissions required by the tools you enable (at minimum Issues read/write, Pull requests read/write, and Contents read/write for file/branch operations; Metadata read-only is automatic).
+
+Installation access tokens are short-lived and are refreshed automatically by PyGithub. No personal GitHub PAT is needed.
