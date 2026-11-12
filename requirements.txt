@@ -4,5 +4,5 @@ huggingface_hub
 llama-cpp-python
 openai
 psutil
-PyGithub
+PyGithub>=2.6.1
 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
