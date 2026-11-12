@@ -9,7 +9,7 @@ import platform
 from rich.console import Console
 from openai import OpenAI
 import psutil
-from github import Github
+from github import Auth, Github
 from github.GithubException import GithubException
 import subprocess
 import tempfile
@@ -29,7 +29,9 @@ variables = [
     "OPENAI_API_KEY",
     "OPENAI_BASE_URL",
     "OPENAI_MODEL",
-    "GITHUB_ACCESS_TOKEN",
+    "GITHUB_APP_ID",
+    "GITHUB_INSTALLATION_ID",
+    "GITHUB_PRIVATE_KEY_PATH",
 ]
 
 config = {var: os.getenv(var, "").strip() for var in variables}
@@ -43,7 +45,9 @@ if missing:
         "OPENAI_API_KEY": "Enter API key: ",
         "OPENAI_BASE_URL": "Enter base URL: ",
         "OPENAI_MODEL": "Enter model: ",
-        "GITHUB_ACCESS_TOKEN": "Enter token(write): ",
+        "GITHUB_APP_ID": "Enter GitHub App ID: ",
+        "GITHUB_INSTALLATION_ID": "Enter GitHub App installation ID: ",
+        "GITHUB_PRIVATE_KEY_PATH": "Enter path to GitHub App .pem private key: ",
     }
 
     for var in missing:
@@ -56,7 +60,9 @@ if missing:
 AI_API_KEY = config["OPENAI_API_KEY"]
 AI_BASE_URL = config["OPENAI_BASE_URL"]
 AI_MODEL = config["OPENAI_MODEL"]
-GIT_TOKEN = config["GITHUB_ACCESS_TOKEN"]
+GITHUB_APP_ID = config["GITHUB_APP_ID"]
+GITHUB_INSTALLATION_ID = config["GITHUB_INSTALLATION_ID"]
+GITHUB_PRIVATE_KEY_PATH = Path(config["GITHUB_PRIVATE_KEY_PATH"]).expanduser()
 
 # ============================================================
 # CLIENTS
@@ -100,7 +106,7 @@ def close_github_item(
     """Comment on and close a GitHub issue or PR."""
 
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
 
         if item_type == "issue":
@@ -546,28 +552,21 @@ def github_issues(owner: str, repo: str):
 
 @tool("Get the comments on any issue")
 def get_issue_comments(owner: str, repo_name: str, issue: int):
-
-    url = f"https://api.github.com/repos/{owner}/{repo_name}/issues/{issue}/comments"
-
-    res = requests.get(url, timeout=10)
-
-    store = res.json()
-
-    print(type(res))
-    print(res)
-
-    comments = []
-
-    for comment in store:
-        comments.append(
+    """Read issue comments using the GitHub App installation's permissions."""
+    try:
+        gh = get_github()
+        github_issue = gh.get_repo(f"{owner}/{repo_name}").get_issue(issue)
+        return [
             {
-                "User": comment["user"]["login"],
-                "Comment": comment["body"],
-                "URL": comment["html_url"],
+                "User": comment.user.login if comment.user else "unknown",
+                "Comment": comment.body,
+                "URL": comment.html_url,
                 "Separator": "-" * 50,
             }
-        )
-    return comments
+            for comment in github_issue.get_comments()
+        ]
+    except GithubException as e:
+        return {"error": str(e)}
 
 
 @tool("Get the followers of someone in github params : username")
@@ -975,16 +974,32 @@ def create_file(file_name: str, value: str):
         return {"Output": f"Created a file {file_name}"}
 
 
-def get_github(token: str):
-    """Create a GitHub client using the authenticated user's token."""
-    return Github(token)
+def get_github():
+    """Create a GitHub client authenticated as this GitHub App installation.
+
+    PyGithub refreshes installation access tokens automatically before expiry.
+    The private key is read from disk and is never stored in source code.
+    """
+    if not GITHUB_APP_ID.isdigit():
+        raise ValueError("GITHUB_APP_ID must be a numeric GitHub App ID.")
+    if not GITHUB_INSTALLATION_ID.isdigit():
+        raise ValueError("GITHUB_INSTALLATION_ID must be a numeric installation ID.")
+    if not GITHUB_PRIVATE_KEY_PATH.is_file():
+        raise FileNotFoundError(
+            f"GitHub App private key not found: {GITHUB_PRIVATE_KEY_PATH}"
+        )
+
+    private_key = GITHUB_PRIVATE_KEY_PATH.read_text(encoding="utf-8")
+    app_auth = Auth.AppAuth(int(GITHUB_APP_ID), private_key)
+    installation_auth = app_auth.get_installation_auth(int(GITHUB_INSTALLATION_ID))
+    return Github(auth=installation_auth)
 
 
 @tool("Fetches a Pull request github")
 def github_get_pull_request(repository: str, pr_number: int) -> dict:
     """Inspect a pull request."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         pr = gh.get_repo(repository).get_pull(pr_number)
         return {
             "number": pr.number,
@@ -1006,7 +1021,7 @@ def github_get_pull_request(repository: str, pr_number: int) -> dict:
 def github_comment_on_pr(repository: str, pr_number: int, comment: str) -> dict:
     """Post a formatted conversation comment on a pull request."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         pr = repo.get_pull(pr_number)
 
@@ -1033,7 +1048,7 @@ def github_comment_on_pr(repository: str, pr_number: int, comment: str) -> dict:
 def github_comment_on_issue(repository: str, issue_number: int, comment: str) -> dict:
     """Post a formatted comment on a GitHub issue."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         issue = repo.get_issue(issue_number)
 
@@ -1060,7 +1075,7 @@ def github_comment_on_issue(repository: str, issue_number: int, comment: str) ->
 def github_create_branch(repository: str, branch_name: str, base_branch: str) -> dict:
     """Create a branch from an existing branch."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         base = repo.get_branch(base_branch)
         repo.create_git_ref(
@@ -1085,7 +1100,7 @@ def github_push_changes(
     Existing files are replaced; new files are created.
     """
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         ref = repo.get_git_ref(f"heads/{branch_name}")
         parent = repo.get_git_commit(ref.object.sha)
@@ -1145,7 +1160,7 @@ def github_create_pull_request(
         if head_branch == base_branch:
             return {"error": "Head and base branches must differ."}
 
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
 
         pr = repo.create_pull(
@@ -1174,7 +1189,7 @@ def github_create_issue(
 ) -> dict:
     """Create an issue in a repository. Repository format: owner/repo."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
 
         issue = repo.create_issue(title=title, body=body)
@@ -1194,7 +1209,7 @@ def github_create_issue(
 def github_close_issue(repository: str, issue_number: int) -> dict:
     """Close an existing GitHub issue."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         issue = repo.get_issue(issue_number)
 
@@ -1214,7 +1229,7 @@ def github_close_issue(repository: str, issue_number: int) -> dict:
 def github_reopen_issue(repository: str, issue_number: int) -> dict:
     """Reopen a previously closed GitHub issue."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         issue = repo.get_issue(issue_number)
 
@@ -1234,7 +1249,7 @@ def github_reopen_issue(repository: str, issue_number: int) -> dict:
 def github_close_pr(repository: str, pr_number: int) -> dict:
     """Close an existing pull request without merging it."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         pr = repo.get_pull(pr_number)
 
@@ -1254,7 +1269,7 @@ def github_close_pr(repository: str, pr_number: int) -> dict:
 def github_reopen_pr(repository: str, pr_number: int) -> dict:
     """Reopen a previously closed pull request."""
     try:
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         pr = repo.get_pull(pr_number)
 
@@ -1288,7 +1303,7 @@ def github_merge_pr(
                 "error": "Invalid merge method. Use merge, squash, or rebase.",
             }
 
-        gh = get_github(GIT_TOKEN)
+        gh = get_github()
         repo = gh.get_repo(repository)
         pr = repo.get_pull(pr_number)
 
