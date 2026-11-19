@@ -32,18 +32,15 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ENV_FILE = SCRIPT_DIR / ".env"
 load_dotenv(ENV_FILE, override=True)
 
-ENV_VARIABLES = [
-    "OPENAI_API_KEY",
-    "OPENAI_BASE_URL",
-    "OPENAI_MODEL",
-    "GITHUB_TOKEN"
-]
+ENV_VARIABLES = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL", "GITHUB_TOKEN"]
 
 config = {key: os.getenv(key, "").strip() for key in ENV_VARIABLES}
 missing = [key for key, value in config.items() if not value]
 
 if missing:
-    console.print(f"Missing .env variable : [bold purple]{', '.join(missing)}[/bold purple]")
+    console.print(
+        f"Missing .env variable : [bold purple]{', '.join(missing)}[/bold purple]"
+    )
     prompts = {
         "OPENAI_API_KEY": "Enter API key: ",
         "OPENAI_BASE_URL": "Enter OpenAI-compatible base URL: ",
@@ -61,7 +58,7 @@ if missing:
 AI_API_KEY = config["OPENAI_API_KEY"]
 AI_BASE_URL = config["OPENAI_BASE_URL"]
 AI_MODEL = config["OPENAI_MODEL"]
-GITHUB_TOKEN=config["GITHUB_TOKEN"]
+GITHUB_TOKEN = config["GITHUB_TOKEN"]
 
 client = OpenAI(api_key=AI_API_KEY, base_url=AI_BASE_URL)
 
@@ -74,12 +71,14 @@ TOOL_REGISTRY = {}
 
 def tool(description):
     """Register a Python function as an AI tool."""
+
     def decorator(function):
         TOOL_REGISTRY[function.__name__] = {
             "function": function,
             "description": description,
         }
         return function
+
     return decorator
 
 
@@ -195,7 +194,9 @@ def extract_text_tool_call(content: str):
         return None
 
     # Ignore anything the model placed inside its private reasoning block.
-    content = re.sub(r"<think>.*?</think>", "", content, flags=re.IGNORECASE | re.DOTALL)
+    content = re.sub(
+        r"<think>.*?</think>", "", content, flags=re.IGNORECASE | re.DOTALL
+    )
     for candidate in _json_objects_from_text(content):
         name = candidate.get("name") or candidate.get("tool")
         arguments = candidate.get("arguments", candidate.get("parameters", {}))
@@ -215,7 +216,9 @@ def clean_assistant_response(content: str) -> str:
         return ""
 
     # Do not display model-internal reasoning blocks.
-    cleaned = re.sub(r"<think>.*?</think>", "", content, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(
+        r"<think>.*?</think>", "", content, flags=re.IGNORECASE | re.DOTALL
+    )
     cleaned = re.sub(r"<\|.*?\|>", "", cleaned, flags=re.DOTALL).strip()
     if not cleaned:
         return ""
@@ -246,10 +249,11 @@ def clean_assistant_response(content: str) -> str:
 # COMMON HELPERS
 # ============================================================
 
+
 # Get github | Init PAT
 def get_github():
     """use github PAT of user to perform task"""
-    auth=Auth.Token(GITHUB_TOKEN)
+    auth = Auth.Token(GITHUB_TOKEN)
 
 
 def format_github_comment(comment: str) -> str:
@@ -271,10 +275,11 @@ def format_github_comment(comment: str) -> str:
 def github_error(exc):
     return {"success": False, "error": str(exc)}
 
+
 # gets users account name (displays at startup)
 
-user=get_github().get_user()
-Uname_Github=user.login
+user = get_github().get_user()
+Uname_Github = user.login
 
 
 # ============================================================
@@ -343,7 +348,10 @@ def run_command(
     if "\n" in command or "\r" in command:
         return {"success": False, "error": "Provide one CMD command per call."}
     if not 1 <= timeout_seconds <= 1800:
-        return {"success": False, "error": "timeout_seconds must be between 1 and 1800."}
+        return {
+            "success": False,
+            "error": "timeout_seconds must be between 1 and 1800.",
+        }
 
     with _CMD_LOCK:
         try:
@@ -454,6 +462,7 @@ def close_cmd() -> dict:
 # LOCAL FILE TOOLS
 # ============================================================
 
+
 @tool("Create a text file at the exact path with the supplied content.")
 def create_file(file_name: str, value: str) -> dict:
     try:
@@ -477,7 +486,11 @@ def read_file(file: str) -> dict:
         path = Path(file).expanduser().resolve()
         if not path.is_file():
             return {"success": False, "error": "File does not exist."}
-        return {"success": True, "file": str(path), "content": path.read_text(encoding="utf-8")}
+        return {
+            "success": True,
+            "file": str(path),
+            "content": path.read_text(encoding="utf-8"),
+        }
     except Exception as exc:
         return {"success": False, "error": str(exc)}
 
@@ -518,7 +531,11 @@ def copy_file(file: str, location: str) -> dict:
             destination = destination / source.name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
-        return {"success": True, "source": str(source), "destination": str(destination.resolve())}
+        return {
+            "success": True,
+            "source": str(source),
+            "destination": str(destination.resolve()),
+        }
     except Exception as exc:
         return {"success": False, "error": str(exc)}
 
@@ -552,6 +569,7 @@ def remove_file(file: str) -> dict:
 # ============================================================
 # SYSTEM AND INFORMATION TOOLS
 # ============================================================
+
 
 @tool("Get operating system, CPU, memory and disk information.")
 def system_info() -> dict:
@@ -621,7 +639,9 @@ def get_weather(location: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
-@tool("Search the web using TinyFish Search and Fetch APIs. Requires TINYFISH_API_KEY in .env.")
+@tool(
+    "Search the web using TinyFish Search and Fetch APIs. Requires TINYFISH_API_KEY in .env."
+)
 def web_search(query: str) -> dict:
     api_key = os.getenv("TINYFISH_API_KEY", "").strip()
     if not api_key:
@@ -671,12 +691,14 @@ def web_search(query: str) -> dict:
         normalized = []
         for item in results[:10]:
             url = item.get("url")
-            normalized.append({
-                "title": item.get("title"),
-                "url": url,
-                "snippet": item.get("snippet"),
-                "content": fetched_by_url.get(url, ""),
-            })
+            normalized.append(
+                {
+                    "title": item.get("title"),
+                    "url": url,
+                    "snippet": item.get("snippet"),
+                    "content": fetched_by_url.get(url, ""),
+                }
+            )
 
         result = {"success": True, "query": query, "results": normalized}
         if fetch_error:
@@ -689,6 +711,7 @@ def web_search(query: str) -> dict:
 # ============================================================
 # LOCAL GIT REPOSITORY TOOLS
 # ============================================================
+
 
 def _repo_path(repository_path):
     repo = Path(repository_path).expanduser().resolve()
@@ -709,7 +732,11 @@ def read_repo_file(repository_path: str, file_path: str) -> dict:
             return {"success": False, "error": "File path escapes repository."}
         if not target.is_file():
             return {"success": False, "error": "File does not exist."}
-        return {"success": True, "file": str(target), "content": target.read_text(encoding="utf-8")}
+        return {
+            "success": True,
+            "file": str(target),
+            "content": target.read_text(encoding="utf-8"),
+        }
     except Exception as exc:
         return {"success": False, "error": str(exc)}
 
@@ -757,7 +784,9 @@ def review_repo_diff(repository_path: str) -> dict:
                 timeout=45,
             )
             if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or f"git exited {result.returncode}")
+                raise RuntimeError(
+                    result.stderr.strip() or f"git exited {result.returncode}"
+                )
             return result.stdout
 
         status = git("status", "--short")
@@ -783,7 +812,10 @@ def review_repo_diff(repository_path: str) -> dict:
 # GITHUB READ / SEARCH TOOLS
 # ============================================================
 
-@tool("List open and closed issues in a GitHub repository. Repository format owner/repo.")
+
+@tool(
+    "List open and closed issues in a GitHub repository. Repository format owner/repo."
+)
 def github_issues(owner: str, repo: str, state: str = "open") -> dict:
     try:
         if state not in ("open", "closed", "all"):
@@ -793,13 +825,15 @@ def github_issues(owner: str, repo: str, state: str = "open") -> dict:
         for item in repository.get_issues(state=state):
             if item.pull_request is not None:
                 continue
-            items.append({
-                "number": item.number,
-                "title": item.title,
-                "state": item.state,
-                "url": item.html_url,
-                "labels": [label.name for label in item.labels],
-            })
+            items.append(
+                {
+                    "number": item.number,
+                    "title": item.title,
+                    "state": item.state,
+                    "url": item.html_url,
+                    "labels": [label.name for label in item.labels],
+                }
+            )
             if len(items) >= 100:
                 break
         return {"success": True, "issues": items}
@@ -813,12 +847,14 @@ def get_issue_comments(owner: str, repo_name: str, issue: int) -> dict:
         repository = get_github().get_repo(f"{owner}/{repo_name}")
         comments = []
         for comment in repository.get_issue(issue).get_comments():
-            comments.append({
-                "id": comment.id,
-                "user": comment.user.login if comment.user else None,
-                "comment": comment.body,
-                "url": comment.html_url,
-            })
+            comments.append(
+                {
+                    "id": comment.id,
+                    "user": comment.user.login if comment.user else None,
+                    "comment": comment.body,
+                    "url": comment.html_url,
+                }
+            )
             if len(comments) >= 100:
                 break
         return {"success": True, "comments": comments}
@@ -830,7 +866,10 @@ def get_issue_comments(owner: str, repo_name: str, issue: int) -> dict:
 def github_followers(username: str) -> dict:
     try:
         user = get_github().get_user(username)
-        return {"success": True, "names": [follower.login for follower in user.get_followers()][:100]}
+        return {
+            "success": True,
+            "names": [follower.login for follower in user.get_followers()][:100],
+        }
     except GithubException as exc:
         return github_error(exc)
 
@@ -840,7 +879,10 @@ def github_search(query: str, search_type: str = "repositories") -> dict:
     try:
         allowed = {"repositories", "users", "issues", "code"}
         if search_type not in allowed:
-            return {"success": False, "error": f"search_type must be one of {sorted(allowed)}"}
+            return {
+                "success": False,
+                "error": f"search_type must be one of {sorted(allowed)}",
+            }
 
         gh = get_github()
         if search_type == "repositories":
@@ -855,45 +897,55 @@ def github_search(query: str, search_type: str = "repositories") -> dict:
         items = []
         for item in results[:10]:
             if search_type == "repositories":
-                items.append({
-                    "name": item.full_name,
-                    "description": item.description,
-                    "language": item.language,
-                    "stars": item.stargazers_count,
-                    "url": item.html_url,
-                })
+                items.append(
+                    {
+                        "name": item.full_name,
+                        "description": item.description,
+                        "language": item.language,
+                        "stars": item.stargazers_count,
+                        "url": item.html_url,
+                    }
+                )
             elif search_type == "users":
                 items.append({"username": item.login, "url": item.html_url})
             elif search_type == "issues":
-                items.append({
-                    "title": item.title,
-                    "repository": item.repository.full_name,
-                    "state": item.state,
-                    "url": item.html_url,
-                })
+                items.append(
+                    {
+                        "title": item.title,
+                        "repository": item.repository.full_name,
+                        "state": item.state,
+                        "url": item.html_url,
+                    }
+                )
             else:
-                items.append({
-                    "name": item.name,
-                    "path": item.path,
-                    "repository": item.repository.full_name,
-                    "url": item.html_url,
-                })
+                items.append(
+                    {
+                        "name": item.name,
+                        "path": item.path,
+                        "repository": item.repository.full_name,
+                        "url": item.html_url,
+                    }
+                )
         return {"success": True, "results": items}
     except GithubException as exc:
         return github_error(exc)
+
+
 @tool("List public repositories owned by a GitHub username.")
 def github_users_repos(username: str) -> dict:
     try:
         user = get_github().get_user(username)
         repos = []
         for repo in user.get_repos(type="owner", sort="updated"):
-            repos.append({
-                "name": repo.name,
-                "full_name": repo.full_name,
-                "description": repo.description,
-                "url": repo.html_url,
-                "stars": repo.stargazers_count,
-            })
+            repos.append(
+                {
+                    "name": repo.name,
+                    "full_name": repo.full_name,
+                    "description": repo.description,
+                    "url": repo.html_url,
+                    "stars": repo.stargazers_count,
+                }
+            )
             if len(repos) >= 100:
                 break
         return {"success": True, "repositories": repos}
@@ -944,6 +996,7 @@ def github_get_pull_request(repository: str, pr_number: int) -> dict:
 # GITHUB COMMENTS, REACTIONS AND LABELS
 # ============================================================
 
+
 @tool("Post a comment on a GitHub issue. Automatically appends the J-Bot signature.")
 def github_comment_on_issue(repository: str, issue_number: int, comment: str) -> dict:
     try:
@@ -960,7 +1013,9 @@ def github_comment_on_issue(repository: str, issue_number: int, comment: str) ->
         return {"success": False, "error": str(exc)}
 
 
-@tool("Post a conversation comment on a GitHub pull request. Automatically appends J-Bot signature.")
+@tool(
+    "Post a conversation comment on a GitHub pull request. Automatically appends J-Bot signature."
+)
 def github_comment_on_pr(repository: str, pr_number: int, comment: str) -> dict:
     try:
         pr = get_github().get_repo(repository).get_pull(pr_number)
@@ -988,7 +1043,10 @@ def github_react_to_issue(
     try:
         allowed = {"+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"}
         if reaction not in allowed:
-            return {"success": False, "error": f"Invalid reaction. Choose from {sorted(allowed)}."}
+            return {
+                "success": False,
+                "error": f"Invalid reaction. Choose from {sorted(allowed)}.",
+            }
         issue = get_github().get_repo(repository).get_issue(issue_number)
         result = issue.create_reaction(reaction)
         return {
@@ -1013,16 +1071,28 @@ def github_react_to_comment(
     try:
         allowed = {"+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"}
         if reaction not in allowed:
-            return {"success": False, "error": f"Invalid reaction. Choose from {sorted(allowed)}."}
+            return {
+                "success": False,
+                "error": f"Invalid reaction. Choose from {sorted(allowed)}.",
+            }
         repo = get_github().get_repo(repository)
         result = repo.get_issue_comment(comment_id).create_reaction(reaction)
-        return {"success": True, "reaction": reaction, "comment_id": comment_id, "reaction_id": result.id}
+        return {
+            "success": True,
+            "reaction": reaction,
+            "comment_id": comment_id,
+            "reaction_id": result.id,
+        }
     except GithubException as exc:
         return github_error(exc)
 
 
-@tool("Add one or more existing GitHub labels to an issue. Labels must already exist in the repository.")
-def github_add_issue_labels(repository: str, issue_number: int, labels: list[str]) -> dict:
+@tool(
+    "Add one or more existing GitHub labels to an issue. Labels must already exist in the repository."
+)
+def github_add_issue_labels(
+    repository: str, issue_number: int, labels: list[str]
+) -> dict:
     try:
         if not labels:
             return {"success": False, "error": "Provide at least one label."}
@@ -1048,11 +1118,18 @@ def github_create_label(
     try:
         color = color.lstrip("#")
         if len(color) != 6 or any(ch not in "0123456789abcdefABCDEF" for ch in color):
-            return {"success": False, "error": "Color must be six hexadecimal characters, e.g. 1D76DB."}
-        label = get_github().get_repo(repository).create_label(
-            name=name,
-            color=color,
-            description=description,
+            return {
+                "success": False,
+                "error": "Color must be six hexadecimal characters, e.g. 1D76DB.",
+            }
+        label = (
+            get_github()
+            .get_repo(repository)
+            .create_label(
+                name=name,
+                color=color,
+                description=description,
+            )
         )
         return {
             "success": True,
@@ -1082,11 +1159,17 @@ def github_remove_issue_label(repository: str, issue_number: int, label: str) ->
 # GITHUB ISSUE / PR MANAGEMENT
 # ============================================================
 
+
 @tool("Create a GitHub issue in repository owner/repo.")
 def github_create_issue(repository: str, title: str, body: str) -> dict:
     try:
         issue = get_github().get_repo(repository).create_issue(title=title, body=body)
-        return {"success": True, "number": issue.number, "title": issue.title, "url": issue.html_url}
+        return {
+            "success": True,
+            "number": issue.number,
+            "title": issue.title,
+            "url": issue.html_url,
+        }
     except GithubException as exc:
         return github_error(exc)
 
@@ -1140,7 +1223,10 @@ def github_merge_pr(
 ) -> dict:
     try:
         if merge_method not in ("merge", "squash", "rebase"):
-            return {"success": False, "error": "merge_method must be merge, squash or rebase."}
+            return {
+                "success": False,
+                "error": "merge_method must be merge, squash or rebase.",
+            }
         pr = get_github().get_repo(repository).get_pull(pr_number)
         if pr.merged:
             return {"success": False, "error": "Pull request is already merged."}
@@ -1173,7 +1259,9 @@ def github_create_branch(repository: str, branch_name: str, base_branch: str) ->
         return github_error(exc)
 
 
-@tool("Commit text file changes to an existing GitHub branch. Files maps paths to complete file contents.")
+@tool(
+    "Commit text file changes to an existing GitHub branch. Files maps paths to complete file contents."
+)
 def github_push_changes(
     repository: str,
     branch_name: str,
@@ -1199,19 +1287,24 @@ def github_push_changes(
                 return {"success": False, "error": f"Invalid repository path: {path}"}
 
             blob = repo.create_git_blob(content, "utf-8")
-            tree_items.append({
-                "path": path,
-                "mode": "100644",
-                "type": "blob",
-                "sha": blob.sha,
-            })
+            tree_items.append(
+                {
+                    "path": path,
+                    "mode": "100644",
+                    "type": "blob",
+                    "sha": blob.sha,
+                }
+            )
 
         tree = repo.create_git_tree(tree_items, parent.tree)
         commit = repo.create_git_commit(commit_message, tree, [parent])
 
         current_ref = repo.get_git_ref(f"heads/{branch_name}")
         if current_ref.object.sha != parent.sha:
-            return {"success": False, "error": "Branch changed concurrently; inspect and retry."}
+            return {
+                "success": False,
+                "error": "Branch changed concurrently; inspect and retry.",
+            }
 
         current_ref.edit(commit.sha, force=False)
         return {
@@ -1237,21 +1330,36 @@ def github_create_pull_request(
     try:
         if head_branch == base_branch:
             return {"success": False, "error": "Head and base branches must differ."}
-        pr = get_github().get_repo(repository).create_pull(
-            title=title,
-            body=body,
-            head=head_branch,
-            base=base_branch,
-            draft=draft,
+        pr = (
+            get_github()
+            .get_repo(repository)
+            .create_pull(
+                title=title,
+                body=body,
+                head=head_branch,
+                base=base_branch,
+                draft=draft,
+            )
         )
-        return {"success": True, "number": pr.number, "title": pr.title, "url": pr.html_url}
+        return {
+            "success": True,
+            "number": pr.number,
+            "title": pr.title,
+            "url": pr.html_url,
+        }
     except GithubException as exc:
         return github_error(exc)
 
 
-@tool("Close a GitHub issue as a duplicate, optionally linking the original issue number.")
-def github_close_issue_duplicate(repository: str, issue_number: int, duplicate_of: int = 0) -> dict:
-    return _close_github_item(repository, issue_number, "issue", "duplicate", duplicate_of)
+@tool(
+    "Close a GitHub issue as a duplicate, optionally linking the original issue number."
+)
+def github_close_issue_duplicate(
+    repository: str, issue_number: int, duplicate_of: int = 0
+) -> dict:
+    return _close_github_item(
+        repository, issue_number, "issue", "duplicate", duplicate_of
+    )
 
 
 @tool("Close a GitHub issue as stale due to inactivity.")
@@ -1259,9 +1367,15 @@ def github_close_issue_stale(repository: str, issue_number: int) -> dict:
     return _close_github_item(repository, issue_number, "issue", "stale", 0)
 
 
-@tool("Close a GitHub pull request as a duplicate, optionally linking the original issue or PR number.")
-def github_close_pr_duplicate(repository: str, pr_number: int, duplicate_of: int = 0) -> dict:
-    return _close_github_item(repository, pr_number, "pull_request", "duplicate", duplicate_of)
+@tool(
+    "Close a GitHub pull request as a duplicate, optionally linking the original issue or PR number."
+)
+def github_close_pr_duplicate(
+    repository: str, pr_number: int, duplicate_of: int = 0
+) -> dict:
+    return _close_github_item(
+        repository, pr_number, "pull_request", "duplicate", duplicate_of
+    )
 
 
 @tool("Close a GitHub pull request as stale due to inactivity.")
@@ -1310,7 +1424,12 @@ def _close_github_item(repository, number, item_type, reason, duplicate_of=0):
             "url": item.html_url,
         }
     except (GithubException, ValueError) as exc:
-        return {"success": False, "error": str(exc)}# ============================================================
+        return {
+            "success": False,
+            "error": str(exc),
+        }  # ============================================================
+
+
 # SYSTEM PROMPT
 # ============================================================
 
@@ -1440,11 +1559,13 @@ def run_agent(user_message: str):
                         {"success": False, "error": str(exc)},
                         ensure_ascii=False,
                     )
-                CHAT_HISTORY.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": result_text,
-                })
+                CHAT_HISTORY.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result_text,
+                    }
+                )
             continue
 
         raw_content = message.content or ""
@@ -1459,31 +1580,35 @@ def run_agent(user_message: str):
             except Exception as exc:
                 result = {"success": False, "error": str(exc)}
             result_text = json.dumps(result, ensure_ascii=False, default=str)
-            CHAT_HISTORY.append({
-                "role": "user",
-                "content": (
-                    f"Execution result for tool {tool_name}: {result_text}\n\n"
-                    "Respond to the user's original request in natural language. "
-                    "Do not claim the action succeeded unless the result has success=true. "
-                    "If another tool is needed, request it using the available tools. "
-                    "Do not output a JSON response wrapper."
-                ),
-            })
+            CHAT_HISTORY.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"Execution result for tool {tool_name}: {result_text}\n\n"
+                        "Respond to the user's original request in natural language. "
+                        "Do not claim the action succeeded unless the result has success=true. "
+                        "If another tool is needed, request it using the available tools. "
+                        "Do not output a JSON response wrapper."
+                    ),
+                }
+            )
             continue
 
         answer = clean_assistant_response(raw_content)
         CHAT_HISTORY.append({"role": "assistant", "content": answer})
         return answer or "I didn't receive a usable response. Please try again."
 
-    message = "I reached the tool-call limit for this request. Please ask me to continue."
+    message = (
+        "I reached the tool-call limit for this request. Please ask me to continue."
+    )
     CHAT_HISTORY.append({"role": "assistant", "content": message})
     return message
-
 
 
 # ============================================================
 # CLI
 # ============================================================
+
 
 def main():
     banner = SCRIPT_DIR / "jarvis.txt"
@@ -1498,7 +1623,9 @@ def main():
 
     while True:
         try:
-            user_input = console.input("[bold cyan]What do you want to do?: [/bold cyan]").strip()
+            user_input = console.input(
+                "[bold cyan]What do you want to do?: [/bold cyan]"
+            ).strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\n[yellow][stopped] J-bot [/yellow]")
             break
@@ -1527,7 +1654,9 @@ def main():
             answer = run_agent(user_input)
             console.print(f"\n[bold green]J-Bot:[/bold green] {answer}\n")
         except KeyboardInterrupt:
-            console.print("\n[yellow]Request interrupted. J-Bot is still running.[/yellow]\n")
+            console.print(
+                "\n[yellow]Request interrupted. J-Bot is still running.[/yellow]\n"
+            )
         except Exception as exc:
             console.print(f"\n[bold red]Error:[/bold red] {exc}\n")
 
