@@ -15,7 +15,7 @@ from typing import get_args, get_origin
 import psutil
 import requests
 from dotenv import load_dotenv, set_key
-from github import Auth, Github
+from github import Auth
 from github.GithubException import GithubException
 from openai import OpenAI
 from rich.console import Console
