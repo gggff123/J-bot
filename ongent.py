@@ -1,4 +1,4 @@
-"""""
+r"""""
         __      __          __       ______        ___            _ 
       / /     / /_  ____  / /_    _/_/ __ \____  / (_)___  ___  | |
  __  / /_____/ __ \/ __ \/ __/   / // / / / __ \/ / / __ \/ _ \ / /
@@ -25,7 +25,9 @@ from typing import get_args, get_origin
 import psutil
 import requests
 from dotenv import load_dotenv, set_key
-from github import Auth
+from github import Auth , Github
+from datetime import datetime 
+import random as rd
 from github.GithubException import GithubException
 from openai import OpenAI
 from rich.console import Console
@@ -258,9 +260,82 @@ def clean_assistant_response(content: str) -> str:
 
 # Get github | Init PAT
 def get_github():
-    """use github PAT of user to perform task"""
-    auth=Auth.Token(GITHUB_TOKEN)
+    """Return an authenticated GitHub client using the user's PAT."""
+    if not GITHUB_TOKEN:
+        raise RuntimeError("GitHub PAT is missing.")
 
+    auth = Auth.Token(GITHUB_TOKEN)
+    return Github(auth=auth)
+
+def greet_user_T():
+    now = datetime.now()
+    hour=now.hour
+    if 5 <= hour < 12:
+        return "Day"
+    elif 12 <= hour < 17:
+        return "Afternoon"
+    elif 17 <= hour < 21:
+        return "Evening"
+    else:
+        return "Night"
+def gree():
+    Night_Quotes=[
+    "Nightowl detected. What are we plotting tonight?",
+    "Still awake? Excellent. My circuits weren't planning to sleep either.",
+    "The world is asleep, but J-Bot is on duty. What's up?",
+    "Burning the midnight oil again? What can I help with?",
+    "Ah, a fellow creature of the night. What's the mission?",
+    "Sleep is optional, apparently. What are we working on?",
+    "Welcome to the late-night club. No membership fee, just bad sleep schedules.",
+    "It's getting late, but your ideas don't seem to know that. What's up?",
+    "Another midnight adventure? Alright, I'm listening.",
+    "The stars are out, my processors are running. What do you need?"
+    ]
+    Evening_T=[
+    "Good evening! Ready to make some questionable but productive decisions?",
+    "Evening detected. What's cooking in that brain of yours?",
+    "The sun's clocking out. Unfortunately, I don't get that luxury.",
+    "Back for another round? J-Bot is ready.",
+    "Golden hour is here. Got something interesting planned?",
+    "Good evening, human. What chaos are we organizing today?",
+    "The day's winding down. Shall we get something done?",
+    "Evening vibes detected. Let's make this one productive.",
+    "You're back! I was just pretending to be busy.",
+    "Another evening, another opportunity to outsmart the to-do list."
+    ]
+    Day_T=[
+    "Rise and shine! J-Bot is online and ready for action.",
+    "Good day, human! What's today's big plan?",
+    "Another day, another opportunity to break something and fix it.",
+    "Morning energy detected. Let's put it to questionable use.",
+    "Welcome back! What are we building, fixing, or overthinking today?",
+    "The day is young, and so are my unresolved tasks.",
+    "Hello there! Your friendly neighborhood AI is ready.",
+    "Day mode activated. Let's turn those ideas into reality.",
+    "Ready to make today slightly less chaotic?",
+    "Hey, human! Enough scrolling. What are we accomplishing today?"
+    ]
+    Afternoon_T=[
+    "Afternoon, human! What are we getting ourselves into today?",
+    "Still going strong? Impressive. What's the plan?",
+    "Good afternoon! J-Bot is online, caffeinated in spirit, and ready.",
+    "The morning is gone, but your problems aren't. How can I help?",
+    "Afternoon vibes detected. What chaos are we solving today?",
+    "Back again? I knew you couldn't stay away from my brilliance.",
+    "The sun is high, the processors are warm. What's cooking?",
+    "Good afternoon! Got any wild ideas for me to entertain?",
+    "Half the day is gone. Let's make the rest count!",
+    "Afternoon, night owl in training. What are we working on?"
+    ]
+    if greet_user_T() == "Afternoon":
+        greet=rd.choice(Afternoon_T)
+    if greet_user_T() == "Evening":
+        greet=rd.choice(Evening_T)
+    if greet_user_T() == "Day":
+       greet=rd.choice(Day_T)
+    if greet_user_T() == "Night":
+        greet=rd.choice(Night_Quotes)
+    return greet
 
 def format_github_comment(comment: str) -> str:
     comment = comment.strip()
@@ -1496,21 +1571,21 @@ def run_agent(user_message: str):
 # ============================================================
 
 def main():
-    banner = SCRIPT_DIR / "jarvis.txt"
+    banner = SCRIPT_DIR / "j-bot.txt"
     if banner.is_file():
         try:
             console.print(banner.read_text(encoding="utf-8"))
         except OSError:
             pass
 
-    console.print(f"[bold green] > Logged in as {Uname_Github}")
+    console.print(f"[bold green]> {gree()} [/bold green]")
     console.print("Type /tools to list tools, /clear to clear chat, or /exit to quit.")
 
     while True:
         try:
-            user_input = console.input("[bold cyan]What on your mind today?: [/bold cyan]").strip()
+            user_input = console.input(f"[bold cyan]{Uname_Github} What's on your mind today?: [/bold cyan]").strip()
         except (EOFError, KeyboardInterrupt):
-            console.print("\n[yellow] exited J-bot [/yellow]")
+            console.print("\nExited")
             break
 
         if not user_input:
@@ -1535,11 +1610,11 @@ def main():
 
         try:
             answer = run_agent(user_input)
-            console.print(f"\n[bold green]J-Bot [{AI_MODEL}]:[/bold green] {answer}\n")
+            console.print(f"\n[bold green]J-Bot ( {AI_MODEL} ):[/bold green] {answer}\n")
         except KeyboardInterrupt:
             console.print("\n[yellow]Request interrupted. J-Bot is still running.[/yellow]\n")
         except Exception as exc:
-            console.print(f"\n[bold red]Error:[/bold red] {exc}\n")
+            console.print(f"\n[bold red]>Error:[/bold red] {exc}\n")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ from github.GithubException import GithubException
 import queue
 import threading
 import subprocess
+from datetime import datetime
+import random as rd
 from pathlib import Path
 import uuid
 import time
@@ -883,6 +885,76 @@ try:
         except GithubException as exc:
             return github_error(exc)
 
+    
+    def greet_user_T():
+        now = datetime.now()
+        hour=now.hour
+        if 5 <= hour < 12:
+            return "Day"
+        elif 12 <= hour < 17:
+            return "Afternoon"
+        elif 17 <= hour < 21:
+            return "Evening"
+        else:
+            return "Night"
+    def gree():
+        Night_Quotes=[
+        "Nightowl detected. What are we plotting tonight?",
+        "Still awake? Excellent. My circuits weren't planning to sleep either.",
+        "The world is asleep, but J-Bot is on duty. What's up?",
+        "Burning the midnight oil again? What can I help with?",
+        "Ah, a fellow creature of the night. What's the mission?",
+        "Sleep is optional, apparently. What are we working on?",
+        "Welcome to the late-night club. No membership fee, just bad sleep schedules.",
+        "It's getting late, but your ideas don't seem to know that. What's up?",
+        "Another midnight adventure? Alright, I'm listening.",
+        "The stars are out, my processors are running. What do you need?"
+        ]
+        Evening_T=[
+        "Good evening! Ready to make some questionable but productive decisions?",
+        "Evening detected. What's cooking in that brain of yours?",
+        "The sun's clocking out. Unfortunately, I don't get that luxury.",
+        "Back for another round? J-Bot is ready.",
+        "Golden hour is here. Got something interesting planned?",
+        "Good evening, human. What chaos are we organizing today?",
+        "The day's winding down. Shall we get something done?",
+        "Evening vibes detected. Let's make this one productive.",
+        "You're back! I was just pretending to be busy.",
+        "Another evening, another opportunity to outsmart the to-do list."
+        ]
+        Day_T=[
+        "Rise and shine! J-Bot is online and ready for action.",
+        "Good day, human! What's today's big plan?",
+        "Another day, another opportunity to break something and fix it.",
+        "Morning energy detected. Let's put it to questionable use.",
+        "Welcome back! What are we building, fixing, or overthinking today?",
+        "The day is young, and so are my unresolved tasks.",
+        "Hello there! Your friendly neighborhood AI is ready.",
+        "Day mode activated. Let's turn those ideas into reality.",
+        "Ready to make today slightly less chaotic?",
+        "Hey, human! Enough scrolling. What are we accomplishing today?"
+        ]
+        Afternoon_T=[
+        "Afternoon, human! What are we getting ourselves into today?",
+        "Still going strong? Impressive. What's the plan?",
+        "Good afternoon! J-Bot is online, caffeinated in spirit, and ready.",
+        "The morning is gone, but your problems aren't. How can I help?",
+        "Afternoon vibes detected. What chaos are we solving today?",
+        "Back again? I knew you couldn't stay away from my brilliance.",
+        "The sun is high, the processors are warm. What's cooking?",
+        "Good afternoon! Got any wild ideas for me to entertain?",
+        "Half the day is gone. Let's make the rest count!",
+        "Afternoon, night owl in training. What are we working on?"
+        ]
+        if greet_user_T() == "Afternoon":
+            greet=rd.choice(Afternoon_T)
+        if greet_user_T() == "Evening":
+            greet=rd.choice(Evening_T)
+        if greet_user_T() == "Day":
+           greet=rd.choice(Day_T)
+        if greet_user_T() == "Night":
+            greet=rd.choice(Night_Quotes)
+        return greet
     @tool
     def github_add_issue_labels(
         repository: str, issue_number: int, labels: list[str]
@@ -1321,8 +1393,10 @@ try:
         }
 
     # CLI Intro art
-    with open("jarvis.txt", encoding="utf-8") as f:
+    with open("j-bot.txt", encoding="utf-8") as f:
         print(f.read())
+        console.print(f"[bold green]> {gree()} [/bold green]")
+        console.print("Type /tools to list tools, /clear to clear chat, or /exit to quit.")
         while True:
             user_input = console.input("[bold cyan]What do you want to do?: ")
             if user_input == "/exit" or user_input == "/quit":
